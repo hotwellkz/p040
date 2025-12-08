@@ -98,7 +98,7 @@ export type ChannelCreatePayload = Omit<
 
 type ChannelFirestoreData = Omit<Channel, "id">;
 
-const channelConverter: FirestoreDataConverter<Channel> = {
+export const channelConverter: FirestoreDataConverter<Channel> = {
   toFirestore(channel: Channel): ChannelFirestoreData {
     const { id, ...rest } = channel;
     
@@ -332,7 +332,3 @@ export const createEmptyChannel = (): Channel => {
     updatedAt: now
   };
 };
-
-// Явный экспорт для обеспечения корректной работы при сборке
-export { channelConverter };
-

@@ -12,7 +12,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../services/firebase";
 import type { Channel, ChannelCreatePayload } from "../domain/channel";
-import { channelConverter } from "../domain/channel";
+import { channelConverter } from "../domain/channel.js";
 
 const channelCollection = (uid: string) =>
   collection(db, "users", uid, "channels").withConverter(channelConverter);
