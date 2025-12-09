@@ -388,23 +388,73 @@ const ChannelEditPage = () => {
     );
   }
 
+  // Функция для генерации summary канала
+  const getChannelSummary = () => {
+    if (!channel) return "";
+    const parts: string[] = [];
+    const platformLabel = PLATFORMS.find(p => p.value === channel.platform)?.label;
+    const languageLabel = LANGUAGES.find(l => l.value === channel.language)?.label;
+    if (platformLabel) parts.push(platformLabel);
+    if (languageLabel) parts.push(languageLabel);
+    if (channel.tone) parts.push(channel.tone);
+    if (channel.audience) {
+      const audiencePreview = channel.audience.split(/\s+/).slice(0, 3).join(" ");
+      if (audiencePreview) parts.push(audiencePreview);
+    }
+    return parts.join(" • ") || "Настройки не заполнены";
+  };
+
   return (
-    <div className="min-h-screen bg-slate-950 px-4 py-10 text-white">
-      <div className="mx-auto w-full max-w-3xl">
-        <div className="mb-8 flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => navigate("/channels")}
-            className="rounded-xl border border-white/10 bg-slate-900/60 px-4 py-2 text-sm text-slate-300 transition hover:border-brand/40 hover:text-white"
-          >
-            <ArrowLeft size={16} className="inline mr-2" />
-            Назад
-          </button>
-          <h1 className="text-2xl font-semibold">Редактирование канала</h1>
+    <div className="min-h-screen bg-slate-950 px-4 py-8 text-white sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-[1100px]">
+        {/* Заголовок страницы */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-white">Редактирование канала</h1>
+          <p className="mt-2 text-sm text-slate-400">
+            Настройте параметры канала и сценарии генерации контента
+          </p>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="space-y-6 rounded-2xl border border-white/10 bg-slate-900/60 p-8 shadow-2xl shadow-brand/10">
+          <div className="relative space-y-6 rounded-[20px] border border-white/10 bg-slate-900/80 p-6 shadow-2xl shadow-brand/20 backdrop-blur-sm sm:p-8">
+            {/* Sticky Header внутри формы */}
+            <div className="sticky top-0 z-10 -mx-6 -mt-6 mb-6 flex items-center justify-between border-b border-white/10 bg-slate-900/95 px-6 py-4 backdrop-blur-md sm:-mx-8 sm:px-8">
+              <div className="flex-1 min-w-0">
+                <h2 className="text-xl font-bold text-white truncate">
+                  {channel?.name || "Новый канал"}
+                </h2>
+                <p className="mt-1 text-xs text-slate-400 truncate">
+                  {getChannelSummary()}
+                </p>
+              </div>
+              <div className="flex items-center gap-3 sm:ml-4">
+                <button
+                  type="button"
+                  onClick={() => navigate("/channels")}
+                  className="rounded-xl border border-white/10 bg-slate-800/60 px-4 py-2 text-sm text-slate-300 transition-all duration-200 hover:border-white/20 hover:bg-slate-800/80 hover:text-white"
+                >
+                  <ArrowLeft size={16} className="inline mr-2" />
+                  Назад
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="rounded-xl bg-gradient-to-r from-brand to-brand/80 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand/30 transition-all duration-200 hover:from-brand/90 hover:to-brand/70 hover:shadow-xl hover:shadow-brand/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 size={16} className="inline mr-2 animate-spin" />
+                      Сохранение...
+                    </>
+                  ) : (
+                    <>
+                      <Save size={16} className="inline mr-2" />
+                      Сохранить
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
             {error && (
               <div className="rounded-lg border border-red-500/30 bg-red-950/40 px-4 py-3 text-sm text-red-200">
                 {error}
@@ -432,7 +482,8 @@ const ChannelEditPage = () => {
               })()}
               className="border-0 bg-transparent"
             >
-              <div className="space-y-6">
+              <div className="space-y-6 pt-2">
+                {/* Название канала - на всю ширину */}
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-slate-200">
                     Название канала *
@@ -444,16 +495,17 @@ const ChannelEditPage = () => {
                       setChannel({ ...channel, name: e.target.value })
                     }
                     required
-                    className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-brand focus:ring-2 focus:ring-brand/40"
+                    className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white outline-none transition-all duration-200 placeholder:text-slate-500 focus:border-brand focus:ring-2 focus:ring-brand/40 hover:border-white/20"
                     placeholder="Название канала"
                   />
                 </div>
 
+                {/* Платформа - на всю ширину */}
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-slate-200">
                     Платформа *
                   </label>
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     {PLATFORMS.map((platform) => (
                       <button
                         key={platform.value}
@@ -461,10 +513,10 @@ const ChannelEditPage = () => {
                         onClick={() =>
                           setChannel({ ...channel, platform: platform.value })
                         }
-                        className={`rounded-xl border px-4 py-3 text-left transition ${
+                        className={`rounded-xl border px-4 py-3 text-left transition-all duration-200 ${
                           channel.platform === platform.value
-                            ? "border-brand bg-brand/10 text-white"
-                            : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40"
+                            ? "border-brand bg-brand/10 text-white shadow-md shadow-brand/20"
+                            : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40 hover:bg-slate-900/80"
                         }`}
                       >
                         {platform.label}
@@ -473,210 +525,230 @@ const ChannelEditPage = () => {
                   </div>
                 </div>
 
-                <div className="grid gap-6 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-slate-200">
-                      Язык *
-                    </label>
-                    <div className="grid gap-3">
-                      {LANGUAGES.map((lang) => (
-                        <button
-                          key={lang.value}
-                          type="button"
-                          onClick={() =>
-                            setChannel({ ...channel, language: lang.value })
-                          }
-                          className={`rounded-xl border px-4 py-3 text-center transition ${
-                            channel.language === lang.value
-                              ? "border-brand bg-brand/10 text-white"
-                              : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40"
-                          }`}
-                        >
-                          {lang.label}
-                        </button>
-                      ))}
+                {/* Двухколоночная раскладка для остальных полей */}
+                <div className="grid gap-6 lg:grid-cols-2">
+                  {/* Левая колонка */}
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-slate-200">
+                        Язык *
+                      </label>
+                      <div className="grid gap-3">
+                        {LANGUAGES.map((lang) => (
+                          <button
+                            key={lang.value}
+                            type="button"
+                            onClick={() =>
+                              setChannel({ ...channel, language: lang.value })
+                            }
+                            className={`rounded-xl border px-4 py-3 text-center transition-all duration-200 ${
+                              channel.language === lang.value
+                                ? "border-brand bg-brand/10 text-white shadow-md shadow-brand/20"
+                                : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40 hover:bg-slate-900/80"
+                            }`}
+                          >
+                            {lang.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-slate-200">
+                        Длительность (сек) *
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        {DURATIONS.map((duration) => (
+                          <button
+                            key={duration}
+                            type="button"
+                            onClick={() =>
+                              setChannel({
+                                ...channel,
+                                targetDurationSec: duration
+                              })
+                            }
+                            className={`rounded-xl border px-4 py-3 text-center transition-all duration-200 ${
+                              channel.targetDurationSec === duration
+                                ? "border-brand bg-brand/10 text-white shadow-md shadow-brand/20"
+                                : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40 hover:bg-slate-900/80"
+                            }`}
+                          >
+                            {duration} сек
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-slate-200">
+                        Ниша / Тематика *
+                      </label>
+                      <input
+                        type="text"
+                        value={channel.niche}
+                        onChange={(e) =>
+                          setChannel({ ...channel, niche: e.target.value })
+                        }
+                        required
+                        className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white outline-none transition-all duration-200 placeholder:text-slate-500 focus:border-brand focus:ring-2 focus:ring-brand/40 hover:border-white/20"
+                        placeholder="Например: Технологии, Кулинария, Спорт"
+                      />
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-slate-200">
-                      Длительность (сек) *
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {DURATIONS.map((duration) => (
-                        <button
-                          key={duration}
-                          type="button"
-                          onClick={() =>
-                            setChannel({
-                              ...channel,
-                              targetDurationSec: duration
-                            })
-                          }
-                          className={`rounded-xl border px-4 py-3 text-center transition ${
-                            channel.targetDurationSec === duration
-                              ? "border-brand bg-brand/10 text-white"
-                              : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40"
-                          }`}
-                        >
-                          {duration} сек
-                        </button>
-                      ))}
+                  {/* Правая колонка */}
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-slate-200">
+                        Целевая аудитория *
+                      </label>
+                      <textarea
+                        value={channel.audience}
+                        onChange={(e) =>
+                          setChannel({ ...channel, audience: e.target.value })
+                        }
+                        required
+                        rows={4}
+                        className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white outline-none transition-all duration-200 placeholder:text-slate-500 focus:border-brand focus:ring-2 focus:ring-brand/40 hover:border-white/20 resize-y"
+                        placeholder="Опишите целевую аудиторию"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-slate-200">
+                        Тон / Стиль *
+                      </label>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {TONES.map((tone) => (
+                          <button
+                            key={tone}
+                            type="button"
+                            onClick={() => setChannel({ ...channel, tone })}
+                            className={`rounded-xl border px-4 py-3 text-center transition-all duration-200 ${
+                              channel.tone === tone
+                                ? "border-brand bg-brand/10 text-white shadow-md shadow-brand/20"
+                                : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40 hover:bg-slate-900/80"
+                            }`}
+                          >
+                            {tone}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-slate-200">
+                        Запрещённые темы
+                      </label>
+                      <textarea
+                        value={channel.blockedTopics}
+                        onChange={(e) =>
+                          setChannel({ ...channel, blockedTopics: e.target.value })
+                        }
+                        rows={4}
+                        className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white outline-none transition-all duration-200 placeholder:text-slate-500 focus:border-brand focus:ring-2 focus:ring-brand/40 hover:border-white/20 resize-y"
+                        placeholder="Темы, которые не должны появляться в сценариях"
+                      />
                     </div>
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-200">
-                    Ниша / Тематика *
-                  </label>
-                  <input
-                    type="text"
-                    value={channel.niche}
-                    onChange={(e) =>
-                      setChannel({ ...channel, niche: e.target.value })
-                    }
-                    required
-                    className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-brand focus:ring-2 focus:ring-brand/40"
-                    placeholder="Например: Технологии, Кулинария, Спорт"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-200">
-                    Целевая аудитория *
-                  </label>
-                  <textarea
-                    value={channel.audience}
-                    onChange={(e) =>
-                      setChannel({ ...channel, audience: e.target.value })
-                    }
-                    required
-                    rows={3}
-                    className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-brand focus:ring-2 focus:ring-brand/40"
-                    placeholder="Опишите целевую аудиторию"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-200">
-                    Тон / Стиль *
-                  </label>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {TONES.map((tone) => (
-                      <button
-                        key={tone}
-                        type="button"
-                        onClick={() => setChannel({ ...channel, tone })}
-                        className={`rounded-xl border px-4 py-3 text-center transition ${
-                          channel.tone === tone
-                            ? "border-brand bg-brand/10 text-white"
-                            : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40"
-                        }`}
-                      >
-                        {tone}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-200">
-                    Запрещённые темы
-                  </label>
-                  <textarea
-                    value={channel.blockedTopics}
-                    onChange={(e) =>
-                      setChannel({ ...channel, blockedTopics: e.target.value })
-                    }
-                    rows={3}
-                    className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-brand focus:ring-2 focus:ring-brand/40"
-                    placeholder="Темы, которые не должны появляться в сценариях"
-                  />
                 </div>
               </div>
             </Accordion>
 
-            <div className="space-y-2">
-              <PreferencesVariantsEditor
-                preferences={channel.preferences}
-                onChange={(preferences: ChannelPreferences) => {
-                  setChannel({ ...channel, preferences });
-                }}
-                onValidationChange={setPreferencesValid}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-200">
-                Режим генерации *
-              </label>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setChannel({
-                      ...channel,
-                      generationMode: "script"
-                    })
-                  }
-                  className={`rounded-xl border px-4 py-3 text-left transition ${
-                    (channel.generationMode || "script") === "script"
-                      ? "border-brand bg-brand/10 text-white"
-                      : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40"
-                  }`}
-                >
-                  <div className="font-semibold">Сценарий</div>
-                  <div className="mt-1 text-xs text-slate-400">
-                    Только подробный сценарий
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setChannel({
-                      ...channel,
-                      generationMode: "prompt"
-                    })
-                  }
-                  className={`rounded-xl border px-4 py-3 text-left transition ${
-                    channel.generationMode === "prompt"
-                      ? "border-brand bg-brand/10 text-white"
-                      : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40"
-                  }`}
-                >
-                  <div className="font-semibold">Сценарий + промпт для видео</div>
-                  <div className="mt-1 text-xs text-slate-400">
-                    Сценарий + VIDEO_PROMPT для Sora/Veo
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setChannel({
-                      ...channel,
-                      generationMode: "video-prompt-only"
-                    })
-                  }
-                  className={`rounded-xl border px-4 py-3 text-left transition ${
-                    channel.generationMode === "video-prompt-only"
-                      ? "border-brand bg-brand/10 text-white"
-                      : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40"
-                  }`}
-                >
-                  <div className="font-semibold">Промпт для видео</div>
-                  <div className="mt-1 text-xs text-slate-400">
-                    Только VIDEO_PROMPT для Sora/Veo без текста сценария
-                  </div>
-                </button>
+            {/* Блок логики генерации сценариев */}
+            <div className="border-t border-white/10 pt-6">
+              <h3 className="mb-1 text-sm font-semibold uppercase tracking-wide text-slate-400">
+                Логика генерации сценариев
+              </h3>
+              <p className="mb-4 text-xs text-slate-500">
+                Настройте режим выбора и варианты дополнительных пожеланий
+              </p>
+              <div className="space-y-2">
+                <PreferencesVariantsEditor
+                  preferences={channel.preferences}
+                  onChange={(preferences: ChannelPreferences) => {
+                    setChannel({ ...channel, preferences });
+                  }}
+                  onValidationChange={setPreferencesValid}
+                />
               </div>
             </div>
 
+            {/* Блок режима генерации */}
             <div className="border-t border-white/10 pt-6">
-              <h3 className="mb-4 text-lg font-semibold text-white">
-                🔄 Источник отправки промптов
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-200">
+                  Режим генерации *
+                </label>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setChannel({
+                        ...channel,
+                        generationMode: "script"
+                      })
+                    }
+                    className={`rounded-xl border px-4 py-3 text-left transition-all duration-200 ${
+                      (channel.generationMode || "script") === "script"
+                        ? "border-brand bg-brand/10 text-white shadow-md shadow-brand/20"
+                        : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40 hover:bg-slate-900/80"
+                    }`}
+                  >
+                    <div className="font-semibold">Сценарий</div>
+                    <div className="mt-1 text-xs text-slate-400">
+                      Только подробный сценарий
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setChannel({
+                        ...channel,
+                        generationMode: "prompt"
+                      })
+                    }
+                    className={`rounded-xl border px-4 py-3 text-left transition-all duration-200 ${
+                      channel.generationMode === "prompt"
+                        ? "border-brand bg-brand/10 text-white shadow-md shadow-brand/20"
+                        : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40 hover:bg-slate-900/80"
+                    }`}
+                  >
+                    <div className="font-semibold">Сценарий + промпт для видео</div>
+                    <div className="mt-1 text-xs text-slate-400">
+                      Сценарий + VIDEO_PROMPT для Sora/Veo
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setChannel({
+                        ...channel,
+                        generationMode: "video-prompt-only"
+                      })
+                    }
+                    className={`rounded-xl border px-4 py-3 text-left transition-all duration-200 ${
+                      channel.generationMode === "video-prompt-only"
+                        ? "border-brand bg-brand/10 text-white shadow-md shadow-brand/20"
+                        : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40 hover:bg-slate-900/80"
+                    }`}
+                  >
+                    <div className="font-semibold">Промпт для видео</div>
+                    <div className="mt-1 text-xs text-slate-400">
+                      Только VIDEO_PROMPT для Sora/Veo без текста сценария
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Блок источника отправки промптов */}
+            <div className="border-t border-white/10 pt-6">
+              <h3 className="mb-1 text-sm font-semibold uppercase tracking-wide text-slate-400">
+                Источник отправки промптов
               </h3>
-              <p className="mb-4 text-sm text-slate-400">
+              <p className="mb-4 text-xs text-slate-500">
                 Выберите, от какого аккаунта отправлять промпты в Syntax
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -688,10 +760,10 @@ const ChannelEditPage = () => {
                       generationTransport: "telegram_global"
                     })
                   }
-                  className={`rounded-xl border px-4 py-3 text-left transition ${
+                  className={`rounded-xl border px-4 py-3 text-left transition-all duration-200 ${
                     (channel.generationTransport || "telegram_global") === "telegram_global"
-                      ? "border-brand bg-brand/10 text-white"
-                      : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40"
+                      ? "border-brand bg-brand/10 text-white shadow-md shadow-brand/20"
+                      : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40 hover:bg-slate-900/80"
                   }`}
                 >
                   <div className="font-semibold">Telegram (общий аккаунт)</div>
@@ -707,10 +779,10 @@ const ChannelEditPage = () => {
                       generationTransport: "telegram_user"
                     })
                   }
-                  className={`rounded-xl border px-4 py-3 text-left transition ${
+                  className={`rounded-xl border px-4 py-3 text-left transition-all duration-200 ${
                     channel.generationTransport === "telegram_user"
-                      ? "border-brand bg-brand/10 text-white"
-                      : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40"
+                      ? "border-brand bg-brand/10 text-white shadow-md shadow-brand/20"
+                      : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40 hover:bg-slate-900/80"
                   }`}
                 >
                   <div className="font-semibold">Telegram (мой аккаунт)</div>
@@ -762,7 +834,7 @@ const ChannelEditPage = () => {
                         });
                       }}
                       placeholder="@SyntaxAI или 123456789"
-                      className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:ring-2 focus:ring-brand/40 focus:border-brand"
+                      className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white outline-none transition-all duration-200 placeholder:text-slate-500 focus:ring-2 focus:ring-brand/40 focus:border-brand hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
                       disabled={telegramStatusLoading || telegramStatus?.status !== "active"}
                     />
                     <p className="mt-1 text-xs text-slate-400">
@@ -773,11 +845,12 @@ const ChannelEditPage = () => {
               )}
             </div>
 
+            {/* Блок ссылок на соцсети */}
             <div className="border-t border-white/10 pt-6">
-              <h3 className="mb-4 text-lg font-semibold text-white">
+              <h3 className="mb-1 text-sm font-semibold uppercase tracking-wide text-slate-400">
                 Ссылки на соцсети
               </h3>
-              <p className="mb-4 text-sm text-slate-400">
+              <p className="mb-4 text-xs text-slate-500">
                 Укажите ссылки на ваши аккаунты в социальных сетях (опционально)
               </p>
 
@@ -807,10 +880,10 @@ const ChannelEditPage = () => {
                       }
                     }}
                     placeholder="https://www.youtube.com/@example"
-                    className={`w-full rounded-xl border px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:ring-2 focus:ring-brand/40 ${
+                    className={`w-full rounded-xl border px-4 py-3 text-white outline-none transition-all duration-200 placeholder:text-slate-500 focus:ring-2 focus:ring-brand/40 ${
                       urlErrors.youtube
                         ? "border-red-500/50 bg-red-950/20 focus:border-red-500"
-                        : "border-white/10 bg-slate-950/60 focus:border-brand"
+                        : "border-white/10 bg-slate-950/60 focus:border-brand hover:border-white/20"
                     }`}
                   />
                   {urlErrors.youtube && (
@@ -920,10 +993,10 @@ const ChannelEditPage = () => {
 
             {/* Блок автоотправки в Syntx */}
             <div className="border-t border-white/10 pt-6">
-              <h3 className="mb-4 text-lg font-semibold text-white">
+              <h3 className="mb-1 text-sm font-semibold uppercase tracking-wide text-slate-400">
                 Автоотправка в Syntx
               </h3>
-              <p className="mb-4 text-sm text-slate-400">
+              <p className="mb-4 text-xs text-slate-500">
                 Настройте автоматическую генерацию и отправку промптов в Syntx-бот по расписанию.
               </p>
 
@@ -1016,7 +1089,7 @@ const ChannelEditPage = () => {
                       channel.autoSendSchedules?.map((schedule, index) => (
                         <div
                           key={schedule.id}
-                          className="rounded-xl border border-white/10 bg-slate-900/40 p-4"
+                          className="rounded-2xl border border-white/10 bg-slate-900/50 shadow-lg shadow-black/20 p-4 transition-all duration-200 hover:border-white/20 hover:shadow-xl"
                         >
                           <div className="mb-4 flex items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -1051,7 +1124,7 @@ const ChannelEditPage = () => {
                                   autoSendSchedules: updated
                                 });
                               }}
-                              className="rounded-lg p-1 text-red-400 transition hover:bg-red-500/20"
+                              className="rounded-lg p-1 text-red-400 transition-all duration-200 hover:bg-red-500/20 hover:text-red-300"
                             >
                               <Trash2 size={16} />
                             </button>
@@ -1128,7 +1201,7 @@ const ChannelEditPage = () => {
                                     autoSendSchedules: updated
                                   });
                                 }}
-                                className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-white outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/40"
+                                className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-white outline-none transition-all duration-200 focus:border-brand focus:ring-2 focus:ring-brand/40 hover:border-white/20"
                               />
                             </div>
                             <div>
@@ -1155,7 +1228,7 @@ const ChannelEditPage = () => {
                                     autoSendSchedules: updated
                                   });
                                 }}
-                                className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-white outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/40"
+                                className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-white outline-none transition-all duration-200 focus:border-brand focus:ring-2 focus:ring-brand/40 hover:border-white/20"
                               />
                             </div>
                           </div>
@@ -1169,10 +1242,10 @@ const ChannelEditPage = () => {
 
             {/* Блок автоматического скачивания в Google Drive */}
             <div className="border-t border-white/10 pt-6">
-              <h3 className="mb-4 text-lg font-semibold text-white">
+              <h3 className="mb-1 text-sm font-semibold uppercase tracking-wide text-slate-400">
                 Автоматическое скачивание в Google Drive
               </h3>
-              <p className="mb-4 text-sm text-slate-400">
+              <p className="mb-4 text-xs text-slate-500">
                 Настройте автоматическое скачивание видео из Telegram и загрузку в Google Drive после автогенерации промпта.
               </p>
 
@@ -1258,8 +1331,10 @@ const ChannelEditPage = () => {
 
             {/* Блок уведомлений */}
             <div className="border-t border-white/10 pt-6">
-              <h3 className="mb-4 text-lg font-semibold text-white">Уведомления</h3>
-              <p className="mb-4 text-sm text-slate-400">
+              <h3 className="mb-1 text-sm font-semibold uppercase tracking-wide text-slate-400">
+                Уведомления
+              </h3>
+              <p className="mb-4 text-xs text-slate-500">
                 Настройте уведомления в Telegram после успешной загрузки видео на Google Drive.
               </p>
 

@@ -22,22 +22,22 @@ export const Accordion = ({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className={`rounded-lg border border-white/10 bg-slate-900/60 ${className}`}>
+    <div className={`rounded-2xl border border-white/10 bg-slate-900/50 shadow-lg shadow-black/10 ${className}`}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-slate-800/30"
+        className="flex w-full items-center justify-between gap-3 p-4 text-left transition-all duration-200 hover:bg-slate-800/40 cursor-pointer"
         aria-expanded={isOpen}
         aria-controls={`accordion-content-${title}`}
       >
         <div className="flex-1">
-          <div className="text-sm font-medium text-white">{title}</div>
+          <div className="text-sm font-semibold text-white">{title}</div>
           {summary && !isOpen && (
             <div className="mt-1 text-xs text-slate-400">{summary}</div>
           )}
         </div>
         <ChevronDown
-          className={`h-5 w-5 flex-shrink-0 text-slate-400 transition-transform ${
+          className={`h-5 w-5 flex-shrink-0 text-slate-400 transition-transform duration-200 ${
             isOpen ? "rotate-180" : ""
           }`}
         />

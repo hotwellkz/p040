@@ -168,7 +168,7 @@ const PreferencesVariantsEditor = ({
         <select
           value={currentPreferences.mode}
           onChange={(e) => handleModeChange(e.target.value as PreferencesMode)}
-          className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-brand focus:ring-2 focus:ring-brand/40"
+          className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white outline-none transition-all duration-200 placeholder:text-slate-500 focus:border-brand focus:ring-2 focus:ring-brand/40 hover:border-white/20"
         >
           <option value="cyclic">По порядку (циклически)</option>
           <option value="random">Случайно</option>
@@ -187,16 +187,16 @@ const PreferencesVariantsEditor = ({
       {/* Список вариантов */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <label className="block text-sm font-medium text-slate-200">
+          <label className="block text-sm font-semibold text-slate-200">
             Варианты дополнительных пожеланий
           </label>
           <button
             type="button"
             onClick={handleAddVariant}
-            className="flex items-center gap-2 rounded-lg border border-white/10 bg-slate-800/50 px-3 py-2 text-sm text-slate-200 transition hover:bg-slate-700/50 hover:text-white"
+            className="flex items-center gap-2 rounded-xl border border-brand/30 bg-brand/10 px-4 py-2.5 text-sm font-medium text-brand transition-all duration-200 hover:border-brand/50 hover:bg-brand/20 hover:shadow-md hover:shadow-brand/20"
           >
-            <Plus size={16} />
-            Добавить вариант
+            <Plus size={18} />
+            Добавить вариант пожеланий
           </button>
         </div>
 
@@ -212,10 +212,10 @@ const PreferencesVariantsEditor = ({
           return (
             <div
               key={variant.id}
-              className="rounded-xl border border-white/10 bg-slate-950/60 overflow-hidden variant-card"
+              className="group rounded-2xl border border-white/10 bg-slate-900/50 overflow-hidden shadow-lg shadow-black/20 transition-all duration-200 hover:border-white/20 hover:shadow-xl hover:shadow-brand/10"
             >
               {/* Заголовок варианта */}
-              <div className="flex items-center justify-between px-3 md:px-4 py-2.5 md:py-3 bg-slate-900/40">
+              <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-slate-900/60 to-slate-800/40 border-b border-white/5">
                 <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
                   {!isMobile && (
                     <GripVertical size={16} className="text-slate-500 flex-shrink-0" />
@@ -224,18 +224,18 @@ const PreferencesVariantsEditor = ({
                     <button
                       type="button"
                       onClick={() => toggleVariantExpanded(variant.id)}
-                      className="flex items-center gap-2 text-sm font-medium text-slate-200 hover:text-white transition"
+                      className="flex items-center gap-2 text-sm font-semibold text-slate-200 hover:text-white transition-all duration-200"
                     >
                       {isExpanded ? (
-                        <ChevronUp size={16} className="text-slate-400" />
+                        <ChevronUp size={16} className="text-slate-400 transition-transform duration-200" />
                       ) : (
-                        <ChevronDown size={16} className="text-slate-400" />
+                        <ChevronDown size={16} className="text-slate-400 transition-transform duration-200" />
                       )}
                       <span>Вариант {index + 1}</span>
                     </button>
                   )}
                   {isMobile && (
-                    <span className="text-sm font-medium text-slate-200">Вариант {index + 1}</span>
+                    <span className="text-sm font-semibold text-slate-200">Вариант {index + 1}</span>
                   )}
                   {!isExpanded && !isMobile && (
                     <span className="text-xs text-slate-400 truncate ml-2">
@@ -243,12 +243,12 @@ const PreferencesVariantsEditor = ({
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-1 md:gap-2">
+                <div className="flex items-center gap-1">
                   {isMobile && (
                     <button
                       type="button"
                       onClick={() => handleOpenEditor(variant.id)}
-                      className="p-2 rounded-lg text-slate-400 hover:text-brand hover:bg-slate-800/50 transition"
+                      className="p-2 rounded-lg text-slate-400 hover:text-brand hover:bg-brand/10 transition-all duration-200"
                       title="Редактировать"
                     >
                       <Edit2 size={16} />
@@ -257,7 +257,7 @@ const PreferencesVariantsEditor = ({
                   <button
                     type="button"
                     onClick={() => handleDuplicateVariant(variant.id)}
-                    className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition"
+                    className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all duration-200"
                     title="Дублировать"
                   >
                     <Copy size={16} />
@@ -266,7 +266,7 @@ const PreferencesVariantsEditor = ({
                     type="button"
                     onClick={() => handleDeleteVariant(variant.id)}
                     disabled={currentPreferences.variants.length <= 1}
-                    className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-900/20 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-900/30 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Удалить"
                   >
                     <Trash2 size={16} />
@@ -307,7 +307,7 @@ const PreferencesVariantsEditor = ({
               ) : (
                 // Десктопная версия: inline textarea
                 isExpanded && (
-                  <div className="p-4">
+                  <div className="p-4 bg-slate-950/30">
                     <textarea
                       value={variant.text}
                       onChange={(e) => {
@@ -317,7 +317,7 @@ const PreferencesVariantsEditor = ({
                         handleVariantChange(variant.id, textarea.value);
                       }}
                       rows={6}
-                      className="w-full rounded-lg border border-white/10 bg-slate-900/60 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-brand focus:ring-2 focus:ring-brand/40 min-h-[120px] h-auto resize-y overflow-auto text-sm leading-relaxed"
+                      className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white outline-none transition-all duration-200 placeholder:text-slate-500 focus:border-brand focus:ring-2 focus:ring-brand/40 hover:border-white/20 min-h-[140px] h-auto resize-y overflow-auto text-sm leading-relaxed font-mono"
                       placeholder="Любые дополнительные требования к сценариям... Например: «бабушка и дедушка — казахи», особенности персонажей, сеттинг, стиль съёмки."
                     />
                   </div>
