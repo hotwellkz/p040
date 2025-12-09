@@ -7,6 +7,7 @@ import type { Channel } from "../domain/channel";
 import type { ChannelStateInfo } from "../utils/channelAutomationState";
 import { hhmmToMinutes } from "../utils/scheduleFreeSlots";
 import AutomationTimersCompact from "./AutomationTimersCompact";
+import ChannelPlatformIcons from "./ChannelPlatformIcons";
 
 const platformLabels: Record<Channel["platform"], string> = {
   YOUTUBE_SHORTS: "YouTube Shorts",
@@ -248,6 +249,15 @@ const ChannelCardCompact = ({
             </div>
           )}
 
+          {/* Иконки платформ */}
+          <ChannelPlatformIcons
+            youtubeUrl={channel.youtubeUrl}
+            tiktokUrl={channel.tiktokUrl}
+            instagramUrl={channel.instagramUrl}
+            size="sm"
+            className="flex-shrink-0"
+          />
+
           {/* Действия */}
           <div className="flex-shrink-0 flex items-center gap-1">
             <button
@@ -322,38 +332,48 @@ const ChannelCardCompact = ({
               </div>
             )}
           </div>
-          <div className="flex items-center justify-end gap-1">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onGenerate();
-              }}
-              className="flex items-center justify-center w-8 h-8 rounded-lg bg-brand/20 hover:bg-brand/30 text-brand-light transition-colors"
-              title="Генерация"
-            >
-              <Play size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit();
-              }}
-              className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 transition-colors"
-              title="Редактировать"
-            >
-              <Edit2 size={14} />
-            </button>
-            <button
-              ref={menuButtonRef}
-              type="button"
-              onClick={handleMenuClick}
-              className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 transition-colors"
-              title="Меню"
-            >
-              <MoreVertical size={14} />
-            </button>
+          <div className="flex items-center justify-end gap-2">
+            {/* Иконки платформ для мобильной версии */}
+            <ChannelPlatformIcons
+              youtubeUrl={channel.youtubeUrl}
+              tiktokUrl={channel.tiktokUrl}
+              instagramUrl={channel.instagramUrl}
+              size="sm"
+              className="flex-shrink-0"
+            />
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onGenerate();
+                }}
+                className="flex items-center justify-center w-8 h-8 rounded-lg bg-brand/20 hover:bg-brand/30 text-brand-light transition-colors"
+                title="Генерация"
+              >
+                <Play size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
+                className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 transition-colors"
+                title="Редактировать"
+              >
+                <Edit2 size={14} />
+              </button>
+              <button
+                ref={menuButtonRef}
+                type="button"
+                onClick={handleMenuClick}
+                className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 transition-colors"
+                title="Меню"
+              >
+                <MoreVertical size={14} />
+              </button>
+            </div>
           </div>
         </div>
       </div>

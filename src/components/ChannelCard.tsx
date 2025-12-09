@@ -6,6 +6,7 @@ import type { Channel } from "../domain/channel";
 import { timestampToIso } from "../utils/firestore";
 import AutomationTimers from "./AutomationTimers";
 import type { ChannelStateInfo } from "../utils/channelAutomationState";
+import ChannelPlatformIcons from "./ChannelPlatformIcons";
 
 export type ChannelAutomationState = "current" | "next" | "previous" | "default";
 
@@ -78,16 +79,6 @@ const ChannelCard = ({
     opacity: isDragging ? 0.5 : 1
   };
 
-  const handleSocialClick = (
-    e: React.MouseEvent<HTMLButtonElement>,
-    url: string
-  ) => {
-    e.stopPropagation();
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
-
-  const hasSocialLinks =
-    channel.youtubeUrl || channel.tiktokUrl || channel.instagramUrl;
 
   const number = (index ?? 0) + 1;
   const updatedDate = new Date(timestampToIso(channel.updatedAt));
@@ -267,40 +258,12 @@ const ChannelCard = ({
           </div>
         </div>
 
-        {hasSocialLinks && (
-          <div className="flex items-center gap-1">
-            {channel.youtubeUrl && (
-              <button
-                type="button"
-                onClick={(e) => handleSocialClick(e, channel.youtubeUrl!)}
-                className="group flex h-6 w-6 items-center justify-center rounded-full bg-red-600/20 text-[10px] text-red-400 transition hover:bg-red-600/30"
-                title="YouTube"
-              >
-                YT
-              </button>
-            )}
-            {channel.tiktokUrl && (
-              <button
-                type="button"
-                onClick={(e) => handleSocialClick(e, channel.tiktokUrl!)}
-                className="group flex h-6 w-6 items-center justify-center rounded-full bg-black text-[10px] text-white transition hover:bg-black/80"
-                title="TikTok"
-              >
-                TT
-              </button>
-            )}
-            {channel.instagramUrl && (
-              <button
-                type="button"
-                onClick={(e) => handleSocialClick(e, channel.instagramUrl!)}
-                className="group flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 text-[10px] text-white transition hover:opacity-90"
-                title="Instagram"
-              >
-                IG
-              </button>
-            )}
-          </div>
-        )}
+        <ChannelPlatformIcons
+          youtubeUrl={channel.youtubeUrl}
+          tiktokUrl={channel.tiktokUrl}
+          instagramUrl={channel.instagramUrl}
+          size="md"
+        />
       </div>
 
             {/* Вторая строка: язык, длительность, аудитория/категория */}
@@ -554,40 +517,13 @@ const ChannelCard = ({
               </div>
             </div>
             <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-              {hasSocialLinks && (
-                <div className="flex items-center gap-0.5 mr-1">
-                  {channel.youtubeUrl && (
-                    <button
-                      type="button"
-                      onClick={(e) => handleSocialClick(e, channel.youtubeUrl!)}
-                      className="flex h-5 w-5 items-center justify-center rounded-full bg-red-600/20 text-[9px] text-red-400"
-                      title="YouTube"
-                    >
-                      YT
-                    </button>
-                  )}
-                  {channel.tiktokUrl && (
-                    <button
-                      type="button"
-                      onClick={(e) => handleSocialClick(e, channel.tiktokUrl!)}
-                      className="flex h-5 w-5 items-center justify-center rounded-full bg-black text-[9px] text-white"
-                      title="TikTok"
-                    >
-                      TT
-                    </button>
-                  )}
-                  {channel.instagramUrl && (
-                    <button
-                      type="button"
-                      onClick={(e) => handleSocialClick(e, channel.instagramUrl!)}
-                      className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 text-[9px] text-white"
-                      title="Instagram"
-                    >
-                      IG
-                    </button>
-                  )}
-                </div>
-              )}
+              <ChannelPlatformIcons
+                youtubeUrl={channel.youtubeUrl}
+                tiktokUrl={channel.tiktokUrl}
+                instagramUrl={channel.instagramUrl}
+                size="sm"
+                className="mr-1"
+              />
               <button
                 type="button"
                 onClick={() => setIsExpanded(!isExpanded)}
