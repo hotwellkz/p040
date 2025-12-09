@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { X, Copy, RefreshCw, Loader2, Sparkles, Check } from "lucide-react";
 import type { Channel } from "../domain/channel";
 import {
@@ -27,6 +28,7 @@ const AIAutoGenerateModal = ({
   channel,
   onClose
 }: AIAutoGenerateModalProps) => {
+  const navigate = useNavigate();
   const { user } = useAuthStore((state) => ({ user: state.user }));
   const { updateChannel, fetchChannels, channels } = useChannelStore((state) => ({
     updateChannel: state.updateChannel,
@@ -49,7 +51,7 @@ const AIAutoGenerateModal = ({
   >("idle");
   const [syntxError, setSyntxError] = useState<string | null>(null);
   const [driveStatus, setDriveStatus] = useState<
-    "idle" | "loading" | "success" | "error"
+    "idle" | "loading" | "success" | "error" | "telegram_session_invalid"
   >("idle");
   const [driveMessage, setDriveMessage] = useState<string | null>(null);
   const [driveWebViewLink, setDriveWebViewLink] = useState<string | null>(null);
@@ -264,7 +266,7 @@ const AIAutoGenerateModal = ({
   };
 
   const handleSendToSyntx = async () => {
-    if (!detailedResult?.videoPrompt) {
+    if (!detailedResult?.videoPrompt || !channel) {
       return;
     }
 
@@ -272,17 +274,58 @@ const AIAutoGenerateModal = ({
     setSyntxError(null);
 
     try {
-      await sendPromptToSyntx(detailedResult.videoPrompt);
+      // Передаем channelId, чтобы backend мог определить, какой тип Telegram использовать
+      await sendPromptToSyntx(detailedResult.videoPrompt, channel.id);
       setSyntxSendStatus("sent");
     } catch (err: any) {
       setSyntxSendStatus("error");
-      const errorMessage =
-        err?.response?.data?.error === "TELEGRAM_SESSION_NOT_INITIALIZED"
-          ? "Телеграм не подключён. Авторизуйтесь через backend командой: npm run dev:login"
-          : err?.response?.data?.message ||
-            err?.message ||
-            "Ошибка отправки. Проверьте Telegram-сессию.";
-      setSyntxError(errorMessage);
+      
+      const status = err?.response?.status || err?.response?.statusCode;
+      const errorCode = err?.response?.data?.error;
+      const errorMessage = err?.response?.data?.message;
+      
+      // Обработка ошибки 401 (неавторизован в приложении - это ошибка авторизации Firebase)
+      if (status === 401) {
+        // Проверяем, это ошибка авторизации приложения или Telegram
+        if (errorCode === "Unauthorized" || errorMessage?.includes("token") || errorMessage?.includes("Authorization")) {
+          setSyntxError("Сессия приложения истекла. Обновите страницу и войдите в аккаунт ещё раз.");
+          console.error("401 Unauthorized (Firebase auth) при отправке в Syntx:", err?.response?.data);
+          return;
+        }
+        // Если это TELEGRAM_SESSION_EXPIRED_NEED_RELOGIN, обрабатываем ниже как ошибку Telegram
+      }
+      
+      // Обработка ошибок Telegram (не ошибки авторизации приложения)
+      let userFriendlyMessage: string;
+      
+      if (errorCode === "TELEGRAM_SESSION_EXPIRED_NEED_RELOGIN") {
+        userFriendlyMessage = "Не удалось отправить промпт в Syntx: сессия Telegram истекла. Отвяжите Telegram в настройках и привяжите снова.";
+      } else if (errorCode === "TELEGRAM_USER_NOT_CONNECTED") {
+        userFriendlyMessage = "Telegram не привязан. Привяжите Telegram в настройках аккаунта.";
+      } else if (errorCode === "TELEGRAM_SESSION_NOT_INITIALIZED") {
+        userFriendlyMessage = "Telegram сессия не инициализирована. Обратитесь к администратору.";
+      } else if (errorCode === "SYNX_CHAT_ID_NOT_CONFIGURED") {
+        userFriendlyMessage = "Настройки сервера не завершены. Обратитесь к администратору.";
+      } else if (errorCode === "FAILED_TO_SEND_PROMPT") {
+        userFriendlyMessage = errorMessage || "Не удалось отправить промпт. Попробуйте позже.";
+      } else if (errorMessage) {
+        userFriendlyMessage = errorMessage;
+      } else if (err?.message) {
+        userFriendlyMessage = err.message;
+      } else {
+        userFriendlyMessage = "Ошибка при отправке промпта в SyntX. Попробуйте позже.";
+      }
+      
+      console.error("Ошибка при отправке в Syntx:", {
+        status,
+        errorCode,
+        errorMessage,
+        channelId: channel?.id,
+        channelTransport: channel?.generationTransport,
+        fullError: err
+      });
+      
+      setSyntxError(userFriendlyMessage);
     }
   };
 
@@ -318,15 +361,38 @@ const AIAutoGenerateModal = ({
       }
     } catch (err: any) {
       setDriveStatus("error");
-      const msg = err?.response?.data?.message;
-
-      // Новый эндпоинт возвращает message напрямую, без кода error
-      if (msg) {
-        setDriveMessage(msg);
+      
+      const errorCode = err?.response?.data?.code || err?.response?.data?.error;
+      const errorMessage = err?.response?.data?.message || err?.message;
+      
+      console.error("Ошибка при загрузке видео в Google Drive:", {
+        status: err?.response?.status,
+        errorCode,
+        errorMessage,
+        fullError: err
+      });
+      
+      // ТОЧНАЯ проверка на TELEGRAM_SESSION_INVALID (только если backend явно вернул этот код)
+      if (errorCode === "TELEGRAM_SESSION_INVALID") {
+        setDriveMessage(
+          "Не удалось забрать видео: сессия Telegram больше недействительна. " +
+          "Зайдите в настройки аккаунта, отвяжите Telegram и привяжите его заново."
+        );
+        // Сохраняем флаг для показа кнопки перехода в настройки
+        setDriveStatus("telegram_session_invalid");
+        return;
+      }
+      
+      // Обработка ошибок скачивания (все остальные ошибки Telegram)
+      if (errorCode === "TELEGRAM_DOWNLOAD_FAILED" || errorMessage?.includes("TELEGRAM_DOWNLOAD")) {
+        setDriveMessage(
+          errorMessage || "Не удалось забрать видео из Telegram. Попробуйте ещё раз чуть позже или проверьте настройки."
+        );
+      } else if (errorMessage) {
+        setDriveMessage(errorMessage);
       } else {
         setDriveMessage(
-          err?.message ||
-            "Ошибка сервера при сохранении видео. Попробуйте позже."
+          "Ошибка сервера при сохранении видео. Попробуйте позже."
         );
       }
     }
@@ -697,6 +763,18 @@ const AIAutoGenerateModal = ({
                   )}
                   {driveStatus === "error" && driveMessage && (
                     <p className="mt-2 text-xs text-red-300">{driveMessage}</p>
+                  )}
+                  {driveStatus === "telegram_session_invalid" && (
+                    <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-900/20 p-3">
+                      <p className="text-xs text-amber-300">{driveMessage}</p>
+                      <button
+                        type="button"
+                        onClick={() => navigate("/settings")}
+                        className="mt-2 rounded-lg bg-amber-500/20 px-3 py-1.5 text-xs font-medium text-amber-300 transition hover:bg-amber-500/30"
+                      >
+                        Перейти в настройки аккаунта
+                      </button>
+                    </div>
                   )}
                 </div>
               )}

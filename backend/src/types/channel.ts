@@ -9,6 +9,8 @@ export type SupportedLanguage = "ru" | "en" | "kk";
 
 export type GenerationMode = "script" | "prompt" | "video-prompt-only";
 
+export type GenerationTransport = "telegram_global" | "telegram_user";
+
 export type PreferencesMode = "cyclic" | "random" | "fixed";
 
 export interface PreferenceVariant {
@@ -44,6 +46,8 @@ export interface Channel {
   blockedTopics: string;
   extraNotes?: string;
   generationMode?: GenerationMode;
+  generationTransport?: GenerationTransport; // Источник отправки промптов: telegram_global или telegram_user
+  telegramSyntaxPeer?: string | null; // Username или ID чата Syntax (например @SyntaxAI)
   preferences?: ChannelPreferences;
   autoSendSchedule?: ChannelAutoSendSchedule[];
   googleDriveFolderId?: string;

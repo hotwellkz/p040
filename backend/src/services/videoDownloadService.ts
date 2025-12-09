@@ -1,5 +1,6 @@
 import { createTelegramClientFromStringSession } from "../telegram/client";
 import { loadSessionString } from "../telegram/sessionStore";
+import { getClientForUser } from "../integrations/telegram/TelegramUserClient";
 import { downloadTelegramVideoToTemp, cleanupTempFile } from "../utils/telegramDownload";
 import { uploadFileToDrive } from "./googleDrive";
 import { uploadFileToDriveWithOAuth } from "./googleDriveOAuth";
@@ -10,6 +11,7 @@ import { google } from "googleapis";
 import { generateVideoFileName } from "../utils/fileUtils";
 import { sendVideoUploadNotification } from "./notificationService";
 import { notificationRepository } from "../repositories/notificationRepo";
+import type { TelegramClient } from "telegram";
 
 const SYNX_CHAT_ID = process.env.SYNX_CHAT_ID;
 
@@ -60,15 +62,6 @@ export async function downloadAndUploadVideoToDrive(
     callStack: new Error().stack?.split("\n").slice(1, 4).join(" | ")
   });
 
-  // Проверяем Telegram-сессию
-  const stringSession = loadSessionString();
-  if (!stringSession) {
-    return {
-      success: false,
-      error: "Telegram-сеанс не настроен. Сначала подключите SyntX на backend (npm run dev:login)."
-    };
-  }
-
   if (!SYNX_CHAT_ID) {
     return {
       success: false,
@@ -86,7 +79,7 @@ export async function downloadAndUploadVideoToDrive(
   }
 
   let tempFilePath: string | null = null;
-  let telegramClient: any = null;
+  let telegramClient: TelegramClient | null = null;
 
   try {
     // Проверяем, что пользователь имеет доступ к этому каналу и читаем данные канала
@@ -109,7 +102,20 @@ export async function downloadAndUploadVideoToDrive(
       googleDriveFolderId?: string;
       uploadNotificationEnabled?: boolean;
       uploadNotificationChatId?: string;
+      generationTransport?: "telegram_global" | "telegram_user";
+      telegramSyntaxPeer?: string | null;
     };
+    
+    // Определяем тип Telegram-клиента на основе настроек канала
+    const transport = channelData.generationTransport || "telegram_global";
+    Logger.info("downloadAndUploadVideoToDrive: определяем тип Telegram-клиента", {
+      channelId,
+      userId,
+      transport,
+      note: transport === "telegram_user" 
+        ? "Будет использована личная сессия пользователя" 
+        : "Будет использована глобальная сессия"
+    });
 
     // ПРОВЕРКА 1: Проверяем, не был ли уже загружен файл с таким telegramMessageId
     if (telegramMessageId) {
@@ -238,8 +244,63 @@ export async function downloadAndUploadVideoToDrive(
       finalFolderId
     });
 
-    // Создаём Telegram-клиент
-    telegramClient = await createTelegramClientFromStringSession(stringSession);
+    // Создаём Telegram-клиент в зависимости от настроек канала
+    if (transport === "telegram_user") {
+      // Используем личную сессию пользователя (та же, что для отправки промпта)
+      Logger.info("downloadAndUploadVideoToDrive: используем личную сессию пользователя", {
+        userId,
+        channelId,
+        transport: "telegram_user",
+        note: "Та же сессия, что используется для отправки промпта"
+      });
+      try {
+        telegramClient = await getClientForUser(userId);
+        Logger.info("downloadAndUploadVideoToDrive: личная сессия получена успешно", {
+          userId,
+          clientConnected: telegramClient.connected,
+          sessionType: "personal"
+        });
+      } catch (clientError: any) {
+        const clientErrorMessage = String(clientError?.message ?? clientError);
+        Logger.error("downloadAndUploadVideoToDrive: ошибка получения личной сессии", {
+          userId,
+          error: clientErrorMessage,
+          errorCode: clientError?.code,
+          errorClassName: clientError?.className
+        });
+        
+        if (
+          clientErrorMessage.includes("Telegram integration not found") ||
+          clientErrorMessage.includes("not active")
+        ) {
+          return {
+            success: false,
+            error: "TELEGRAM_USER_NOT_CONNECTED: Telegram не привязан. Привяжите Telegram в настройках аккаунта."
+          };
+        }
+        
+        throw clientError;
+      }
+    } else {
+      // Используем глобальную сессию
+      Logger.info("downloadAndUploadVideoToDrive: используем глобальную сессию", {
+        channelId,
+        transport: "telegram_global",
+        note: "Глобальная системная сессия"
+      });
+      const stringSession = loadSessionString();
+      if (!stringSession) {
+        return {
+          success: false,
+          error: "TELEGRAM_SESSION_NOT_INITIALIZED: Telegram-сеанс не настроен. Сначала подключите SyntX на backend (npm run dev:login)."
+        };
+      }
+      telegramClient = await createTelegramClientFromStringSession(stringSession);
+      Logger.info("downloadAndUploadVideoToDrive: глобальная сессия получена успешно", {
+        clientConnected: telegramClient.connected,
+        sessionType: "global"
+      });
+    }
 
     try {
       // Шаг 1: Скачиваем видео во временную папку
@@ -286,16 +347,77 @@ export async function downloadAndUploadVideoToDrive(
           timestamp: new Date().toISOString()
         });
       } catch (downloadError: any) {
-        Logger.error("downloadAndUploadVideoToDrive: video download failed", {
+        const errorMessage = String(downloadError?.message ?? downloadError);
+        const errorCode = downloadError?.code;
+        const errorClassName = downloadError?.className;
+        const errorErrorCode = downloadError?.error_code;
+        const errorErrorMessage = downloadError?.error_message;
+        
+        // Детальное логирование реальной ошибки от Telegram
+        Logger.error("downloadAndUploadVideoToDrive: video download failed - ДЕТАЛЬНАЯ ИНФОРМАЦИЯ ОБ ОШИБКЕ", {
           channelId,
           userId,
           telegramMessageId,
-          error: downloadError?.message || String(downloadError),
+          transport,
+          // Основные поля ошибки
+          errorMessage,
+          errorCode,
+          errorClassName,
+          errorErrorCode,
+          errorErrorMessage,
+          // Дополнительные поля
           errorStack: downloadError?.stack,
-          errorName: downloadError?.name
+          errorName: downloadError?.name,
+          errorType: typeof downloadError,
+          // Полный объект ошибки (без чувствительных данных)
+          fullError: {
+            message: errorMessage,
+            code: errorCode,
+            className: errorClassName,
+            error_code: errorErrorCode,
+            error_message: errorErrorMessage,
+            name: downloadError?.name,
+            constructor: downloadError?.constructor?.name
+          }
         });
+        
+        // ТОЧНАЯ проверка на AUTH_KEY_UNREGISTERED (только настоящая ошибка сессии)
+        const isAuthKeyUnregistered = 
+          (errorCode === 401 && errorMessage?.includes("AUTH_KEY_UNREGISTERED")) ||
+          (errorErrorCode === 401 && errorErrorMessage?.includes("AUTH_KEY_UNREGISTERED")) ||
+          errorClassName === "AuthKeyUnregistered" ||
+          (errorMessage?.includes("AUTH_KEY_UNREGISTERED") && 
+           !errorMessage.includes("TELEGRAM_DOWNLOAD") && 
+           !errorMessage.includes("TELEGRAM_TIMEOUT"));
+        
+        const isSessionRevoked = 
+          errorClassName === "SessionRevoked" ||
+          (errorMessage?.includes("SESSION_REVOKED") && 
+           !errorMessage.includes("TELEGRAM_DOWNLOAD") && 
+           !errorMessage.includes("TELEGRAM_TIMEOUT"));
+        
+        // Обработка ТОЛЬКО настоящей ошибки недействительной сессии Telegram
+        if (isAuthKeyUnregistered || isSessionRevoked) {
+          Logger.error("Telegram session invalid in downloadAndUploadVideoToDrive - РЕАЛЬНАЯ ОШИБКА СЕССИИ", {
+            channelId,
+            userId,
+            telegramMessageId,
+            transport,
+            error: errorMessage,
+            errorCode,
+            errorClassName,
+            errorErrorCode,
+            isAuthKeyUnregistered,
+            isSessionRevoked
+          });
+          // Не создаем уведомление для ошибки сессии - пользователь должен перепривязать Telegram
+          return {
+            success: false,
+            error: "TELEGRAM_SESSION_INVALID: Сессия Telegram недействительна (AUTH_KEY_UNREGISTERED). Отвяжите и заново привяжите Telegram в настройках аккаунта."
+          };
+        }
 
-        // Создаём уведомление об ошибке скачивания
+        // Создаём уведомление об ошибке скачивания (только для других ошибок, не связанных с сессией)
         try {
           let timeSlot: string | undefined;
           if (scheduleId) {
@@ -315,13 +437,13 @@ export async function downloadAndUploadVideoToDrive(
             channelId,
             type: "video_download_failed",
             title: "Ошибка скачивания видео из Telegram",
-            message: `Канал: ${channelData.name || channelId}${timeSlot ? `, слот ${timeSlot}` : ""}. ${downloadError?.message || "Не удалось скачать видео"}`,
+            message: `Канал: ${channelData.name || channelId}${timeSlot ? `, слот ${timeSlot}` : ""}. ${errorMessage || "Не удалось скачать видео"}`,
             status: "error",
             isRead: false,
             metadata: {
               scheduleId: scheduleId || undefined,
               timeSlot,
-              errorDetails: downloadError?.message || String(downloadError)
+              errorDetails: errorMessage
             }
           });
         } catch (notificationError) {
@@ -330,7 +452,7 @@ export async function downloadAndUploadVideoToDrive(
           });
         }
 
-        throw new Error(`VIDEO_DOWNLOAD_FAILED: Не удалось скачать видео из Telegram. ${downloadError?.message || String(downloadError)}`);
+        throw new Error(`VIDEO_DOWNLOAD_FAILED: Не удалось скачать видео из Telegram. ${errorMessage}`);
       }
 
       tempFilePath = downloadResult.tempPath;

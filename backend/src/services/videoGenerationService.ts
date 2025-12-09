@@ -1,4 +1,4 @@
-import { sendPromptFromUserToSyntx, type TelegramMessageInfo } from "./sendPromptFromUserToSyntx";
+import { sendPromptToSyntax, type TelegramMessageInfo } from "./sendPromptFromUserToSyntx";
 import { scheduleAutoDownload } from "./scheduledTasks";
 import { Logger } from "../utils/logger";
 import { db, isFirestoreAvailable } from "./firebaseAdmin";
@@ -119,13 +119,22 @@ export async function runVideoGenerationForChannel(
       autoDownloadToDriveEnabled?: boolean;
       googleDriveFolderId?: string;
       autoDownloadDelayMinutes?: number;
+      generationTransport?: "telegram_global" | "telegram_user";
+      telegramSyntaxPeer?: string | null;
     };
+
+    const channel = {
+      id: channelId,
+      generationTransport: channelData.generationTransport || "telegram_global",
+      telegramSyntaxPeer: channelData.telegramSyntaxPeer || null
+    } as { id: string; generationTransport?: "telegram_global" | "telegram_user"; telegramSyntaxPeer?: string | null };
 
     Logger.info("runVideoGenerationForChannel: channel validated", {
       channelId,
       userId,
       channelName: channelData.name || "not provided",
-      source
+      source,
+      transport: channel.generationTransport
     });
 
     // Шаг 1: Отправляем промпт в Syntx
@@ -133,18 +142,21 @@ export async function runVideoGenerationForChannel(
       channelId,
       userId,
       source,
-      promptLength: prompt.length
+      promptLength: prompt.length,
+      transport: channel.generationTransport
     });
 
     let messageInfo: TelegramMessageInfo;
     try {
-      messageInfo = await sendPromptFromUserToSyntx(userId, prompt.trim());
+      // Используем новую функцию, которая учитывает настройки канала
+      messageInfo = await sendPromptToSyntax(channel, userId, prompt.trim());
     } catch (sendError: any) {
       const errorMessage = sendError?.message || String(sendError);
       Logger.error("runVideoGenerationForChannel: failed to send prompt to Syntx", {
         channelId,
         userId,
         source,
+        transport: channel.generationTransport || "telegram_global",
         error: errorMessage,
         errorStack: sendError?.stack
       });
@@ -157,6 +169,15 @@ export async function runVideoGenerationForChannel(
           messageId: 0,
           chatId: "",
           error: "Telegram-сеанс не настроен или истёк. Запустите 'npm run dev:login' в папке backend."
+        };
+      }
+
+      if (errorMessage.includes("TELEGRAM_USER_NOT_CONNECTED")) {
+        return {
+          success: false,
+          messageId: 0,
+          chatId: "",
+          error: "Личный Telegram аккаунт не привязан. Привяжите Telegram в настройках профиля."
         };
       }
 

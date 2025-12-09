@@ -71,6 +71,63 @@ export async function downloadTelegramVideoToTemp(
         ]);
       } catch (getMsgError: any) {
         const errorMsg = String(getMsgError?.message ?? getMsgError);
+        const errorCode = getMsgError?.code;
+        const errorClassName = getMsgError?.className;
+        const errorErrorCode = getMsgError?.error_code;
+        const errorErrorMessage = getMsgError?.error_message;
+        
+        // Детальное логирование реальной ошибки
+        Logger.error("Error getting messages from Telegram chat - ДЕТАЛЬНАЯ ИНФОРМАЦИЯ", {
+          error: errorMsg,
+          errorCode,
+          errorClassName,
+          errorErrorCode,
+          errorErrorMessage,
+          chatId,
+          messageId: messageId || "not specified",
+          fullError: {
+            message: errorMsg,
+            code: errorCode,
+            className: errorClassName,
+            error_code: errorErrorCode,
+            error_message: errorErrorMessage,
+            name: getMsgError?.name,
+            constructor: getMsgError?.constructor?.name
+          }
+        });
+        
+        // ТОЧНАЯ проверка на AUTH_KEY_UNREGISTERED (только настоящая ошибка сессии)
+        const isAuthKeyUnregistered = 
+          (errorCode === 401 && errorMsg?.includes("AUTH_KEY_UNREGISTERED")) ||
+          (errorErrorCode === 401 && errorErrorMessage?.includes("AUTH_KEY_UNREGISTERED")) ||
+          errorClassName === "AuthKeyUnregistered" ||
+          (errorMsg?.includes("AUTH_KEY_UNREGISTERED") && 
+           !errorMsg.includes("TELEGRAM_DOWNLOAD") && 
+           !errorMsg.includes("TELEGRAM_TIMEOUT"));
+        
+        const isSessionRevoked = 
+          errorClassName === "SessionRevoked" ||
+          (errorMsg?.includes("SESSION_REVOKED") && 
+           !errorMsg.includes("TELEGRAM_DOWNLOAD") && 
+           !errorMsg.includes("TELEGRAM_TIMEOUT"));
+        
+        // Обработка ТОЛЬКО настоящей ошибки недействительной сессии Telegram
+        if (isAuthKeyUnregistered || isSessionRevoked) {
+          Logger.error("Telegram session invalid during getMessages - РЕАЛЬНАЯ ОШИБКА СЕССИИ", {
+            error: errorMsg,
+            errorCode,
+            errorClassName,
+            errorErrorCode,
+            chatId,
+            isAuthKeyUnregistered,
+            isSessionRevoked
+          });
+          throw new Error(
+            "TELEGRAM_SESSION_INVALID: Сессия Telegram недействительна (AUTH_KEY_UNREGISTERED). " +
+            "Отвяжите и заново привяжите Telegram в настройках аккаунта."
+          );
+        }
+        
         if (errorMsg.includes("timeout") || errorMsg.includes("TIMEOUT")) {
           throw new Error(
             "TELEGRAM_TIMEOUT: Превышено время ожидания получения сообщений. " +
@@ -242,12 +299,63 @@ export async function downloadTelegramVideoToTemp(
       ]);
     } catch (downloadError: any) {
       const errorMessage = String(downloadError?.message ?? downloadError);
+      const errorCode = downloadError?.code;
+      const errorClassName = downloadError?.className;
+      const errorErrorCode = downloadError?.error_code;
+      const errorErrorMessage = downloadError?.error_message;
       
-      Logger.error("Error during Telegram media download to buffer", {
+      // Детальное логирование реальной ошибки
+      Logger.error("Error during Telegram media download to buffer - ДЕТАЛЬНАЯ ИНФОРМАЦИЯ", {
         error: errorMessage,
+        errorCode,
+        errorClassName,
+        errorErrorCode,
+        errorErrorMessage,
         messageId: videoMessage.id,
-        errorType: downloadError?.name
+        errorType: downloadError?.name,
+        fullError: {
+          message: errorMessage,
+          code: errorCode,
+          className: errorClassName,
+          error_code: errorErrorCode,
+          error_message: errorErrorMessage,
+          name: downloadError?.name,
+          constructor: downloadError?.constructor?.name
+        }
       });
+      
+      // ТОЧНАЯ проверка на AUTH_KEY_UNREGISTERED (только настоящая ошибка сессии)
+      const isAuthKeyUnregistered = 
+        (errorCode === 401 && errorMessage?.includes("AUTH_KEY_UNREGISTERED")) ||
+        (errorErrorCode === 401 && errorErrorMessage?.includes("AUTH_KEY_UNREGISTERED")) ||
+        errorClassName === "AuthKeyUnregistered" ||
+        (errorMessage?.includes("AUTH_KEY_UNREGISTERED") && 
+         !errorMessage.includes("TELEGRAM_DOWNLOAD") && 
+         !errorMessage.includes("TELEGRAM_TIMEOUT"));
+      
+      const isSessionRevoked = 
+        errorClassName === "SessionRevoked" ||
+        (errorMessage?.includes("SESSION_REVOKED") && 
+         !errorMessage.includes("TELEGRAM_DOWNLOAD") && 
+         !errorMessage.includes("TELEGRAM_TIMEOUT"));
+      
+      // Обработка ТОЛЬКО настоящей ошибки недействительной сессии Telegram
+      if (isAuthKeyUnregistered || isSessionRevoked) {
+        Logger.error("Telegram session invalid during video download - РЕАЛЬНАЯ ОШИБКА СЕССИИ", {
+          error: errorMessage,
+          errorCode,
+          errorClassName,
+          errorErrorCode,
+          chatId,
+          messageId: videoMessage.id,
+          isAuthKeyUnregistered,
+          isSessionRevoked
+        });
+        throw new Error(
+          "TELEGRAM_SESSION_INVALID: Сессия Telegram недействительна (AUTH_KEY_UNREGISTERED). " +
+          "Отвяжите и заново привяжите Telegram в настройках аккаунта."
+        );
+      }
       
       // Специальная обработка таймаутов
       if (errorMessage.includes("timeout") || errorMessage.includes("TIMEOUT")) {
@@ -351,14 +459,23 @@ export async function downloadTelegramVideoToTemp(
     };
   } catch (error: any) {
     const errorMessage = String(error?.message ?? error);
+    const errorCode = error?.code;
+    const errorClassName = error?.className;
 
     Logger.error("Error downloading video from Telegram", {
       error: errorMessage,
+      errorCode,
+      errorClassName,
       chatId,
-      messageId
+      messageId,
+      fullError: error
     });
 
     // Пробрасываем ошибку дальше с понятным сообщением
+    if (errorMessage.includes("TELEGRAM_SESSION_INVALID")) {
+      throw new Error(errorMessage);
+    }
+    
     if (errorMessage.includes("NO_VIDEO_FOUND")) {
       throw new Error(errorMessage);
     }

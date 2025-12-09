@@ -14,6 +14,8 @@ export type SupportedLanguage = "ru" | "en" | "kk";
 
 export type GenerationMode = "script" | "prompt" | "video-prompt-only";
 
+export type GenerationTransport = "telegram_global" | "telegram_user";
+
 export type PreferencesMode = "cyclic" | "random" | "fixed";
 
 export interface PreferenceVariant {
@@ -51,6 +53,8 @@ export interface Channel {
   extraNotes?: string; // Устаревшее поле, оставлено для обратной совместимости
   preferences?: ChannelPreferences; // Новая система мульти-пожеланий
   generationMode?: GenerationMode; // По умолчанию "script" для обратной совместимости
+  generationTransport?: GenerationTransport; // Источник отправки промптов: telegram_global или telegram_user
+  telegramSyntaxPeer?: string | null; // Username или ID чата Syntax (например @SyntaxAI)
   youtubeUrl?: string | null; // Ссылка на YouTube канал
   tiktokUrl?: string | null; // Ссылка на TikTok канал
   instagramUrl?: string | null; // Ссылка на Instagram канал
@@ -114,6 +118,8 @@ export const channelConverter: FirestoreDataConverter<Channel> = {
       tone: rest.tone,
       blockedTopics: rest.blockedTopics,
       generationMode: rest.generationMode || "script",
+      generationTransport: rest.generationTransport || "telegram_global",
+      telegramSyntaxPeer: rest.telegramSyntaxPeer ?? null,
       // Явно устанавливаем autoSendEnabled, чтобы Firestore сохранил его
       autoSendEnabled: rest.autoSendEnabled ?? false,
       autoSendSchedules: rest.autoSendSchedules ?? [],
@@ -153,6 +159,12 @@ export const channelConverter: FirestoreDataConverter<Channel> = {
     }
     if (rest.instagramUrl !== undefined) {
       data.instagramUrl = rest.instagramUrl;
+    }
+    if (rest.generationTransport !== undefined) {
+      data.generationTransport = rest.generationTransport;
+    }
+    if (rest.telegramSyntaxPeer !== undefined) {
+      data.telegramSyntaxPeer = rest.telegramSyntaxPeer;
     }
     if (rest.telegramAutoSendEnabled !== undefined) {
       data.telegramAutoSendEnabled = rest.telegramAutoSendEnabled;

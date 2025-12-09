@@ -26,6 +26,7 @@ process.on("unhandledRejection", (reason: any) => {
   Logger.error("Unhandled promise rejection", reason);
 });
 import telegramRoutes from "./routes/telegramRoutes";
+import telegramIntegrationRoutes from "./routes/telegramIntegrationRoutes";
 import cronRoutes from "./routes/cronRoutes";
 import promptRoutes from "./routes/promptRoutes";
 import googleDriveRoutes from "./routes/googleDriveRoutes";
@@ -82,6 +83,7 @@ app.use(express.json());
 app.use(express.static("public")); // Для статических файлов (HTML страница для OAuth)
 
 app.use("/api/telegram", telegramRoutes);
+app.use("/api/telegram-integration", telegramIntegrationRoutes);
 app.use("/api/cron", cronRoutes);
 app.use("/api/prompt", promptRoutes);
 app.use("/api/google-drive", googleDriveRoutes);

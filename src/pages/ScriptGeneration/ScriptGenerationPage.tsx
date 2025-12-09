@@ -224,31 +224,64 @@ ${script.sections.sounds || "—"}`;
   };
 
   const handleSendToSyntx = async () => {
-    if (!detailedResult?.videoPrompt) return;
+    if (!detailedResult?.videoPrompt || !channel) return;
 
     setSyntxSendStatus("sending");
     setSyntxError(null);
 
     try {
-      await sendPromptToSyntx(detailedResult.videoPrompt);
+      // Передаем channelId, чтобы backend мог определить, какой тип Telegram использовать
+      await sendPromptToSyntx(detailedResult.videoPrompt, channel.id);
       setSyntxSendStatus("sent");
     } catch (err: any) {
-      const apiError = err?.response?.data?.error;
-      if (apiError === "TELEGRAM_SESSION_EXPIRED_NEED_RELOGIN") {
-        setSyntxError(
-          "Сессия Telegram истекла. Запустите 'npm run dev:login' в папке backend для повторной авторизации."
-        );
-      } else if (apiError === "TELEGRAM_SESSION_NOT_INITIALIZED") {
-        setSyntxError(
-          "Telegram сессия не инициализирована. Запустите 'npm run dev:login' в папке backend."
-        );
-      } else {
-        setSyntxError(
-          err?.response?.data?.message ||
-            "Ошибка при отправке промпта в SyntX. Попробуйте позже."
-        );
-      }
       setSyntxSendStatus("error");
+      
+      const status = err?.response?.status || err?.response?.statusCode;
+      const errorCode = err?.response?.data?.error;
+      const errorMessage = err?.response?.data?.message;
+      
+      // Обработка ошибки 401 (неавторизован в приложении - это ошибка авторизации Firebase)
+      if (status === 401) {
+        // Проверяем, это ошибка авторизации приложения или Telegram
+        if (errorCode === "Unauthorized" || errorMessage?.includes("token") || errorMessage?.includes("Authorization")) {
+          setSyntxError("Сессия приложения истекла. Обновите страницу и войдите в аккаунт ещё раз.");
+          console.error("401 Unauthorized (Firebase auth) при отправке в Syntx:", err?.response?.data);
+          return;
+        }
+        // Если это TELEGRAM_SESSION_EXPIRED_NEED_RELOGIN, обрабатываем ниже как ошибку Telegram
+      }
+      
+      // Обработка ошибок Telegram (не ошибки авторизации приложения)
+      let userFriendlyMessage: string;
+      
+      if (errorCode === "TELEGRAM_SESSION_EXPIRED_NEED_RELOGIN") {
+        userFriendlyMessage = "Не удалось отправить промпт в Syntx: сессия Telegram истекла. Отвяжите Telegram в настройках и привяжите снова.";
+      } else if (errorCode === "TELEGRAM_USER_NOT_CONNECTED") {
+        userFriendlyMessage = "Telegram не привязан. Привяжите Telegram в настройках аккаунта.";
+      } else if (errorCode === "TELEGRAM_SESSION_NOT_INITIALIZED") {
+        userFriendlyMessage = "Telegram сессия не инициализирована. Обратитесь к администратору.";
+      } else if (errorCode === "SYNX_CHAT_ID_NOT_CONFIGURED") {
+        userFriendlyMessage = "Настройки сервера не завершены. Обратитесь к администратору.";
+      } else if (errorCode === "FAILED_TO_SEND_PROMPT") {
+        userFriendlyMessage = errorMessage || "Не удалось отправить промпт. Попробуйте позже.";
+      } else if (errorMessage) {
+        userFriendlyMessage = errorMessage;
+      } else if (err?.message) {
+        userFriendlyMessage = err.message;
+      } else {
+        userFriendlyMessage = "Ошибка при отправке промпта в SyntX. Попробуйте позже.";
+      }
+      
+      console.error("Ошибка при отправке в Syntx:", {
+        status,
+        errorCode,
+        errorMessage,
+        channelId: channel?.id,
+        channelTransport: channel?.generationTransport,
+        fullError: err
+      });
+      
+      setSyntxError(userFriendlyMessage);
     }
   };
 

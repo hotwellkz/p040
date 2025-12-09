@@ -40,10 +40,14 @@ export async function authRequired(
   if (!authHeader?.startsWith("Bearer ")) {
     Logger.warn("authRequired: missing or invalid Authorization header", {
       hasHeader: !!authHeader,
+      headerValue: authHeader ? `${authHeader.substring(0, 20)}...` : "none",
       method: req.method,
       path: req.path
     });
-    res.status(401).json({ error: "Unauthorized", message: "Missing or invalid Authorization header" });
+    res.status(401).json({ 
+      error: "Unauthorized", 
+      message: "Missing or invalid Authorization header" 
+    });
     return;
   }
 
@@ -70,14 +74,13 @@ export async function authRequired(
       email: decodedToken.email
     };
 
-    // Успешная авторизация - логируем только в development режиме для отладки
-    if (process.env.NODE_ENV !== "production") {
-      Logger.info("authRequired: token verified successfully", {
-        uid: decodedToken.uid,
-        method: req.method,
-        path: req.path
-      });
-    }
+    // Успешная авторизация - логируем для отладки
+    Logger.info("authRequired: token verified successfully", {
+      uid: decodedToken.uid,
+      email: decodedToken.email || "not provided",
+      method: req.method,
+      path: req.path
+    });
 
     // Передаём управление следующему middleware/роуту
     next();
@@ -85,17 +88,21 @@ export async function authRequired(
     // Обрабатываем различные типы ошибок Firebase Auth
     let errorMessage = "Invalid token";
     let logMessage = "authRequired: token verification failed";
+    let errorCode = "INVALID_TOKEN";
 
     if (error instanceof Error) {
       if (error.message.includes("expired")) {
         errorMessage = "Token expired";
         logMessage = "authRequired: token expired";
+        errorCode = "TOKEN_EXPIRED";
       } else if (error.message.includes("revoked")) {
         errorMessage = "Token revoked";
         logMessage = "authRequired: token revoked";
+        errorCode = "TOKEN_REVOKED";
       } else if (error.message.includes("invalid")) {
         errorMessage = "Invalid token";
         logMessage = "authRequired: invalid token format";
+        errorCode = "INVALID_TOKEN_FORMAT";
       } else {
         errorMessage = error.message;
       }
@@ -103,12 +110,15 @@ export async function authRequired(
 
     Logger.warn(logMessage, {
       error: errorMessage,
+      errorCode,
       method: req.method,
-      path: req.path
+      path: req.path,
+      tokenPrefix: token.substring(0, 20) + "..."
     });
 
     res.status(401).json({ 
       error: "Unauthorized", 
+      errorCode,
       message: errorMessage 
     });
   }

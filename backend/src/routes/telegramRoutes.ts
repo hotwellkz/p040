@@ -214,40 +214,124 @@ router.post("/sendPrompt", authRequired, async (req, res) => {
   }
 });
 
-// Новый эндпоинт для отправки промпта в SyntX через глобальную сессию (не требует userId)
+// Эндпоинт для отправки промпта в SyntX с учетом настроек канала
+// Поддерживает telegram_global и telegram_user
 router.post("/sendPromptToSyntx", authRequired, async (req, res) => {
-  const { prompt } = req.body as { prompt?: string };
+  const { prompt, channelId } = req.body as { prompt?: string; channelId?: string };
+  const userId = req.user!.uid;
+  
+  Logger.info("sendPromptToSyntx: запрос получен", {
+    userId,
+    channelId: channelId || "не указан",
+    promptLength: prompt?.length || 0,
+    hasPrompt: !!prompt
+  });
+  
   if (!prompt) {
     return res.status(400).json({ error: "prompt is required" });
   }
 
-  // Проверяем наличие SYNX_CHAT_ID перед выполнением
-  if (!process.env.SYNX_CHAT_ID) {
-    Logger.error("SYNX_CHAT_ID is not configured");
-    return res.status(500).json({
-      error: "SYNX_CHAT_ID_NOT_CONFIGURED",
-      message: "SYNX_CHAT_ID не настроен на сервере. Добавьте переменную окружения в Cloud Run."
-    });
-  }
-
   try {
-    // Используем глобальную сессию (userId не нужен, используем пустую строку)
-    await sendPromptFromUserToSyntx("", prompt);
-    return res.json({ status: "sent" });
+    // Если указан channelId, используем функцию, которая учитывает настройки канала
+    if (channelId) {
+      // Проверяем доступность Firestore
+      if (!isFirestoreAvailable() || !db) {
+        Logger.error("sendPromptToSyntx: Firestore недоступен", { userId, channelId });
+        return res.status(503).json({
+          error: "FIRESTORE_UNAVAILABLE",
+          message: "База данных недоступна. Попробуйте позже."
+        });
+      }
+      
+      const channelRef = db
+        .collection("users")
+        .doc(userId)
+        .collection("channels")
+        .doc(channelId);
+      
+      const channelSnap = await channelRef.get();
+      
+      if (!channelSnap.exists) {
+        Logger.warn("sendPromptToSyntx: канал не найден", { userId, channelId });
+        return res.status(404).json({
+          error: "CHANNEL_NOT_FOUND",
+          message: "Канал не найден"
+        });
+      }
+      
+      const channelData = channelSnap.data();
+      const channel = {
+        id: channelId,
+        generationTransport: channelData?.generationTransport || "telegram_global",
+        telegramSyntaxPeer: channelData?.telegramSyntaxPeer || null
+      };
+      
+      Logger.info("sendPromptToSyntx: настройки канала", {
+        userId,
+        channelId,
+        transport: channel.generationTransport,
+        peer: channel.telegramSyntaxPeer || "не указан"
+      });
+      
+      // Используем функцию, которая учитывает настройки канала
+      const { sendPromptToSyntax } = await import("../services/sendPromptFromUserToSyntx");
+      await sendPromptToSyntax(channel as any, userId, prompt);
+      
+      Logger.info("sendPromptToSyntx: промпт отправлен успешно", {
+        userId,
+        channelId,
+        transport: channel.generationTransport
+      });
+      
+      return res.json({ status: "sent" });
+    } else {
+      // Если channelId не указан, используем глобальную сессию (для обратной совместимости)
+      Logger.info("sendPromptToSyntx: использование глобальной сессии (channelId не указан)", { userId });
+      
+      // Проверяем наличие SYNX_CHAT_ID перед выполнением
+      if (!process.env.SYNX_CHAT_ID) {
+        Logger.error("SYNX_CHAT_ID is not configured");
+        return res.status(500).json({
+          error: "SYNX_CHAT_ID_NOT_CONFIGURED",
+          message: "SYNX_CHAT_ID не настроен на сервере. Добавьте переменную окружения в Cloud Run."
+        });
+      }
+      
+      await sendPromptFromUserToSyntx("", prompt);
+      return res.json({ status: "sent" });
+    }
   } catch (err: any) {
     const errorMessage = String(err?.message ?? err);
     
+    Logger.error("sendPromptToSyntx: ошибка", {
+      userId,
+      channelId,
+      error: errorMessage,
+      errorType: err?.constructor?.name
+    });
+    
+    // Ошибки Telegram сессии возвращаем как 400/403, а не 401
+    // 401 зарезервирован для ошибок авторизации приложения
     if (err instanceof TelegramSessionExpiredError) {
       return res
-        .status(401)
-        .json({ error: "TELEGRAM_SESSION_EXPIRED_NEED_RELOGIN" });
+        .status(403)
+        .json({ 
+          error: "TELEGRAM_SESSION_EXPIRED_NEED_RELOGIN",
+          message: "Сессия Telegram истекла. Отвяжите Telegram в настройках и привяжите снова."
+        });
     }
     
     if (errorMessage === "TELEGRAM_SESSION_NOT_INITIALIZED") {
       return res.status(400).json({
         error: "TELEGRAM_SESSION_NOT_INITIALIZED",
-        message:
-          "Telegram сессия не инициализирована. Запустите 'npm run dev:login' в папке backend."
+        message: "Telegram сессия не инициализирована. Обратитесь к администратору."
+      });
+    }
+    
+    if (errorMessage === "TELEGRAM_USER_NOT_CONNECTED") {
+      return res.status(400).json({
+        error: "TELEGRAM_USER_NOT_CONNECTED",
+        message: "Telegram не привязан. Привяжите Telegram в настройках аккаунта."
       });
     }
     
@@ -557,13 +641,45 @@ router.post("/fetchLatestVideoToDrive", authRequired, async (req, res) => {
   } catch (err: any) {
     const errorMessage = String(err?.message ?? err);
     const errorStack = err?.stack;
+    const errorCode = err?.code;
+    const errorClassName = err?.className;
+    const errorErrorCode = err?.error_code;
+    const errorErrorMessage = err?.error_message;
     
-    Logger.error("Error in /api/telegram/fetchLatestVideoToDrive", {
+    // Детальное логирование реальной ошибки
+    Logger.error("Error in /api/telegram/fetchLatestVideoToDrive - ДЕТАЛЬНАЯ ИНФОРМАЦИЯ", {
       error: errorMessage,
+      errorCode,
+      errorClassName,
+      errorErrorCode,
+      errorErrorMessage,
       stack: errorStack,
       userId,
-      channelId
+      channelId,
+      fullError: {
+        message: errorMessage,
+        code: errorCode,
+        className: errorClassName,
+        error_code: errorErrorCode,
+        error_message: errorErrorMessage,
+        name: err?.name,
+        constructor: err?.constructor?.name
+      }
     });
+
+    // ТОЧНАЯ проверка на TELEGRAM_SESSION_INVALID (только если это реальная ошибка сессии)
+    if (errorMessage.includes("TELEGRAM_SESSION_INVALID:")) {
+      Logger.error("Telegram session invalid in fetchLatestVideoToDrive - РЕАЛЬНАЯ ОШИБКА СЕССИИ", {
+        userId,
+        channelId,
+        error: errorMessage
+      });
+      return res.status(400).json({
+        error: "TELEGRAM_SESSION_INVALID",
+        code: "TELEGRAM_SESSION_INVALID",
+        message: "Сессия Telegram недействительна (AUTH_KEY_UNREGISTERED). Отвяжите и заново привяжите Telegram в настройках аккаунта."
+      });
+    }
 
     // Специфичные ошибки
     if (
@@ -739,6 +855,21 @@ router.post("/fetchVideoAndUploadToDrive", authRequired, async (req, res) => {
       // Обработка ошибок из сервиса
       const errorMessage = result.error || "Unknown error";
 
+      // ТОЧНАЯ проверка на TELEGRAM_SESSION_INVALID (только если это реальная ошибка сессии)
+      if (errorMessage.includes("TELEGRAM_SESSION_INVALID:")) {
+        Logger.error("Telegram session invalid in fetchVideoAndUploadToDrive - РЕАЛЬНАЯ ОШИБКА СЕССИИ", {
+          userId,
+          channelId,
+          error: errorMessage
+        });
+        return res.status(400).json({
+          status: "error",
+          error: "TELEGRAM_SESSION_INVALID",
+          code: "TELEGRAM_SESSION_INVALID",
+          message: "Сессия Telegram недействительна (AUTH_KEY_UNREGISTERED). Отвяжите и заново привяжите Telegram в настройках аккаунта."
+        });
+      }
+
       // Обработка специфичных ошибок
       if (errorMessage.includes("NO_VIDEO_FOUND")) {
       return res.status(404).json({
@@ -765,12 +896,35 @@ router.post("/fetchVideoAndUploadToDrive", authRequired, async (req, res) => {
       });
     }
 
+    // ТОЧНАЯ проверка на TELEGRAM_SESSION_INVALID (только если это реальная ошибка сессии)
+    if (errorMessage.includes("TELEGRAM_SESSION_INVALID:")) {
+      Logger.error("Telegram session invalid in fetchVideoAndUploadToDrive - РЕАЛЬНАЯ ОШИБКА СЕССИИ", {
+        userId,
+        channelId,
+        error: errorMessage
+      });
+      return res.status(400).json({
+        status: "error",
+        error: "TELEGRAM_SESSION_INVALID",
+        code: "TELEGRAM_SESSION_INVALID",
+        message: "Сессия Telegram недействительна (AUTH_KEY_UNREGISTERED). Отвяжите и заново привяжите Telegram в настройках аккаунта."
+      });
+    }
+
+    // Обработка ошибок скачивания (все остальные ошибки Telegram)
     if (errorMessage.includes("TELEGRAM_DOWNLOAD_ERROR") || errorMessage.includes("TELEGRAM_DOWNLOAD_FAILED")) {
+      Logger.warn("Telegram download failed (not session error) in fetchVideoAndUploadToDrive", {
+        userId,
+        channelId,
+        error: errorMessage
+      });
       return res.status(500).json({
         status: "error",
+        error: "TELEGRAM_DOWNLOAD_FAILED",
+        code: "TELEGRAM_DOWNLOAD_FAILED",
         message:
           errorMessage.replace("TELEGRAM_DOWNLOAD_ERROR: ", "").replace("TELEGRAM_DOWNLOAD_FAILED: ", "") ||
-          "Ошибка при скачивании видео из Telegram. Проверьте подключение и попробуйте позже."
+          "Не удалось скачать видео из Telegram. Попробуйте ещё раз или проверьте настройки."
       });
     }
 

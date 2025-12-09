@@ -14,6 +14,7 @@ import type {
 import PreferencesVariantsEditor from "../../components/PreferencesVariantsEditor";
 import { validatePreferences } from "../../utils/preferencesUtils";
 import { testBlottata } from "../../api/blottata";
+import { getTelegramStatus } from "../../api/telegramIntegration";
 
 const PLATFORMS: { value: SupportedPlatform; label: string }[] = [
   { value: "YOUTUBE_SHORTS", label: "YouTube Shorts" },
@@ -78,6 +79,7 @@ const ChannelEditPage = () => {
   const [preferencesValid, setPreferencesValid] = useState(true);
   const [testingBlottata, setTestingBlottata] = useState(false);
   const [blottataTestResult, setBlottataTestResult] = useState<string | null>(null);
+  const [telegramStatus, setTelegramStatus] = useState<{ status: string } | null>(null);
 
   useEffect(() => {
     if (!user?.uid || !channelId) {
@@ -107,6 +109,22 @@ const ChannelEditPage = () => {
     void loadChannel();
   }, [user?.uid, channelId, navigate, fetchChannels]);
 
+  // Загружаем статус Telegram интеграции
+  useEffect(() => {
+    const loadTelegramStatus = async () => {
+      try {
+        const status = await getTelegramStatus();
+        setTelegramStatus(status);
+      } catch (err) {
+        // Если интеграция не найдена или ошибка, считаем что не привязан
+        setTelegramStatus({ status: "not_connected" });
+      }
+    };
+    if (user?.uid) {
+      void loadTelegramStatus();
+    }
+  }, [user?.uid]);
+
   useEffect(() => {
     if (channels.length > 0 && channelId) {
       const found = channels.find((c) => c.id === channelId);
@@ -115,6 +133,10 @@ const ChannelEditPage = () => {
         setChannel({
           ...found,
           generationMode: found.generationMode || "script",
+          generationTransport: found.generationTransport || "telegram_global",
+          telegramSyntaxPeer: found.telegramSyntaxPeer && found.telegramSyntaxPeer.trim() !== '' 
+            ? found.telegramSyntaxPeer 
+            : '@syntxaibot',
           youtubeUrl: found.youtubeUrl || null,
           tiktokUrl: found.tiktokUrl || null,
           instagramUrl: found.instagramUrl || null,
@@ -217,6 +239,22 @@ const ChannelEditPage = () => {
       }
     }
 
+    // Валидация настроек Telegram интеграции
+    if (channel.generationTransport === "telegram_user") {
+      // Используем значение по умолчанию, если поле пустое
+      const syntaxPeer = channel.telegramSyntaxPeer || '@syntxaibot';
+      if (!syntaxPeer || syntaxPeer.trim() === "") {
+        setError("Для использования личного Telegram аккаунта необходимо указать username или ID чата Syntax");
+        return;
+      }
+      
+      // Проверяем статус Telegram интеграции
+      if (telegramStatus?.status !== "active") {
+        setError("Для использования личного Telegram аккаунта необходимо привязать Telegram в настройках профиля");
+        return;
+      }
+    }
+
     // Валидация настроек Blottata
     if (channel.blotataEnabled) {
       if (!channel.driveInputFolderId || channel.driveInputFolderId.trim() === "") {
@@ -254,7 +292,15 @@ const ChannelEditPage = () => {
     setError(null);
 
     try {
-      await updateChannel(user.uid, channel);
+      // Подготавливаем канал для сохранения: если telegramSyntaxPeer пустое при telegram_user, используем значение по умолчанию
+      const channelToSave = {
+        ...channel,
+        telegramSyntaxPeer: channel.generationTransport === "telegram_user" && (!channel.telegramSyntaxPeer || channel.telegramSyntaxPeer.trim() === "")
+          ? '@syntxaibot'
+          : channel.telegramSyntaxPeer
+      };
+      
+      await updateChannel(user.uid, channelToSave);
       navigate("/channels", { replace: true });
     } catch (err) {
       setError(
@@ -580,6 +626,107 @@ const ChannelEditPage = () => {
                   </div>
                 </button>
               </div>
+            </div>
+
+            <div className="border-t border-white/10 pt-6">
+              <h3 className="mb-4 text-lg font-semibold text-white">
+                🔄 Источник отправки промптов
+              </h3>
+              <p className="mb-4 text-sm text-slate-400">
+                Выберите, от какого аккаунта отправлять промпты в Syntax
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setChannel({
+                      ...channel,
+                      generationTransport: "telegram_global"
+                    })
+                  }
+                  className={`rounded-xl border px-4 py-3 text-left transition ${
+                    (channel.generationTransport || "telegram_global") === "telegram_global"
+                      ? "border-brand bg-brand/10 text-white"
+                      : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40"
+                  }`}
+                >
+                  <div className="font-semibold">Telegram (общий аккаунт)</div>
+                  <div className="mt-1 text-xs text-slate-400">
+                    Использовать системный Telegram аккаунт
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setChannel({
+                      ...channel,
+                      generationTransport: "telegram_user"
+                    })
+                  }
+                  className={`rounded-xl border px-4 py-3 text-left transition ${
+                    channel.generationTransport === "telegram_user"
+                      ? "border-brand bg-brand/10 text-white"
+                      : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40"
+                  }`}
+                >
+                  <div className="font-semibold">Telegram (мой аккаунт)</div>
+                  <div className="mt-1 text-xs text-slate-400">
+                    Отправлять от вашего личного Telegram
+                  </div>
+                </button>
+              </div>
+
+              {channel.generationTransport === "telegram_user" && (
+                <div className="mt-4 space-y-3">
+                  {/* Проверка статуса Telegram интеграции */}
+                  {telegramStatus?.status !== "active" && (
+                    <div className="rounded-lg border border-amber-500/30 bg-amber-900/20 p-3">
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1">
+                          <div className="font-medium text-amber-300">
+                            ⚠️ Telegram не привязан
+                          </div>
+                          <p className="mt-1 text-sm text-amber-200/80">
+                            Для использования вашего личного Telegram аккаунта необходимо привязать его в настройках профиля.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => navigate("/settings")}
+                            className="mt-2 rounded-lg bg-amber-500/20 px-3 py-1.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/30"
+                          >
+                            Привязать Telegram
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-200">
+                      Username или ID чата Syntax *
+                    </label>
+                    <input
+                      type="text"
+                      value={channel.telegramSyntaxPeer || '@syntxaibot'}
+                      onChange={(e) => {
+                        const value = e.target.value.trim();
+                        // Сохраняем значение, даже если оно пустое (пользователь может стереть)
+                        // При сохранении пустое значение будет заменено на null
+                        setChannel({
+                          ...channel,
+                          telegramSyntaxPeer: value === '' ? null : value
+                        });
+                      }}
+                      placeholder="@SyntaxAI или 123456789"
+                      className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:ring-2 focus:ring-brand/40 focus:border-brand"
+                      disabled={telegramStatus?.status !== "active"}
+                    />
+                    <p className="mt-1 text-xs text-slate-400">
+                      Укажите username (например @SyntaxAI) или числовой ID чата
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="border-t border-white/10 pt-6">
