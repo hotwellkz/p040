@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Loader2, Sparkles, Wand2, CheckCircle2, Shield, Zap, Rocket, Home } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import clsx from "clsx";
 import { useAuthStore } from "../../stores/authStore";
 import { useNavigate, useLocation, Link } from "react-router-dom";
@@ -132,82 +132,30 @@ const AuthPage = () => {
           <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-purple-950/20 via-transparent to-transparent" />
         </div>
 
-        <div className="relative z-10 mx-auto min-h-screen px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+        <div className="relative z-10 mx-auto min-h-screen flex flex-col items-center justify-center px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
           {/* Кликабельный логотип/название вверху */}
-          <div className="mb-8 sm:mb-12 flex items-center justify-center sm:justify-start">
+          <div className="absolute top-6 left-1/2 -translate-x-1/2 sm:left-8 sm:translate-x-0">
             <Link
               to="/"
-              className="group inline-flex items-center gap-2.5 rounded-xl glass border border-white/10 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:border-purple-500/50 hover:bg-white/5 hover:scale-105 hover:shadow-lg hover:shadow-purple-500/20 sm:px-5 sm:py-3 sm:text-base"
+              className="group inline-flex items-center gap-2.5 rounded-xl glass border border-white/10 px-4 py-2 text-sm font-semibold text-white transition-all duration-300 hover:border-purple-500/50 hover:bg-white/5 hover:scale-105 hover:shadow-lg hover:shadow-purple-500/20"
               aria-label="Перейти на главную страницу"
             >
-              <Sparkles size={20} className="text-purple-400 transition-transform group-hover:scale-110 group-hover:text-purple-300" />
+              <Sparkles size={18} className="text-purple-400 transition-transform group-hover:scale-110 group-hover:text-purple-300" />
               <span className="bg-gradient-to-r from-white to-slate-200 bg-clip-text text-transparent group-hover:from-purple-300 group-hover:to-pink-300 transition-all">
                 ShortsAI Studio
               </span>
             </Link>
           </div>
 
-          <div className="mx-auto grid w-full max-w-7xl gap-12 lg:grid-cols-2 lg:gap-16 items-center">
-            {/* Левая часть - текстовый блок */}
-            <section 
-              className={`space-y-8 transition-all duration-1000 ${
-                isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-              }`}
-            >
-              {/* Badge */}
-              <div className="inline-flex items-center gap-2 rounded-full glass px-5 py-2.5 text-sm font-medium text-purple-300 neon-glow border border-purple-500/30">
-                <Sparkles size={18} className="animate-pulse" />
-                <span>ShortsAI Studio</span>
+          {/* Форма авторизации - центрированная */}
+          <div className="w-full max-w-md mx-auto">
+            <div className={`glass-strong rounded-3xl border border-white/20 p-6 sm:p-8 lg:p-10 shadow-2xl transition-all duration-500 ${
+              isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+            }`}>
+              {/* Заголовок формы */}
+              <div className="mb-8 text-center">
+                <h2 className="text-2xl sm:text-3xl font-bold text-white">{headline}</h2>
               </div>
-              
-              {/* Главный заголовок */}
-              <h1 className="text-5xl font-extrabold leading-tight tracking-tight text-white sm:text-6xl lg:text-7xl">
-                <span className="block mb-3">Генерируйте сценарии</span>
-                <span className="block gradient-text">для Shorts, Reels, TikTok</span>
-                <span className="block mt-3 text-4xl sm:text-5xl lg:text-6xl">за минуты</span>
-              </h1>
-              
-              {/* Подзаголовок */}
-              <p className="text-xl sm:text-2xl text-slate-300 leading-relaxed max-w-2xl">
-                Настройте каналы с нужным тоном, аудиторией и длительностью, затем запускайте генерацию сценариев на базе OpenAI с персональными ограничениями.
-              </p>
-              
-              {/* Список преимуществ */}
-              <ul className="space-y-4 text-lg text-slate-300">
-                {[
-                  { icon: Wand2, text: "Мастер настройки каналов за 9 шагов" },
-                  { icon: Shield, text: "Безопасное хранение каналов в Firestore" },
-                  { icon: Zap, text: "Генератор сценариев с Hook / Action / Final / Text / Voice / Sound" },
-                  { icon: Rocket, text: "Автоматизация публикаций по расписанию" }
-                ].map((item, index) => (
-                  <li 
-                    key={index}
-                    className="flex items-start gap-4 fade-in-up"
-                    style={{ animationDelay: `${0.3 + index * 0.1}s` }}
-                  >
-                    <div className="mt-1 flex-shrink-0 rounded-lg bg-purple-500/20 p-2 text-purple-400 border border-purple-500/30">
-                      <item.icon size={20} />
-                    </div>
-                    <span className="pt-0.5">{item.text}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            {/* Правая часть - форма авторизации */}
-            <section 
-              className={`transition-all duration-1000 delay-200 ${
-                isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-              }`}
-            >
-              <div className="glass-strong rounded-3xl border border-white/20 p-8 sm:p-10 shadow-2xl neon-glow">
-                {/* Заголовок формы */}
-                <div className="mb-8 text-center">
-                  <p className="mb-2 text-xs uppercase tracking-[0.3em] text-slate-400">
-                    Firebase Auth
-                  </p>
-                  <h2 className="text-3xl font-bold text-white">{headline}</h2>
-                </div>
 
                 {/* Переключатель Вход/Регистрация */}
                 <div className="mb-8 flex gap-2 rounded-2xl glass p-1.5 border border-white/10">
@@ -298,48 +246,38 @@ const AuthPage = () => {
                   </button>
                 </form>
 
-                {/* Переключение режима и ссылка на главную */}
-                <div className="mt-6 space-y-3 text-center">
-                  <button
-                    type="button"
-                    onClick={toggleMode}
-                    className="block w-full text-sm font-medium text-purple-400 underline-offset-4 transition hover:text-purple-300"
-                  >
-                    {secondaryActionLabel}
-                  </button>
-                  <div className="text-xs text-slate-500">или</div>
+              {/* Переключение режима и ссылка на главную */}
+              <div className="mt-6 space-y-2 text-center">
+                <button
+                  type="button"
+                  onClick={toggleMode}
+                  className="text-sm font-medium text-purple-400 underline-offset-4 transition hover:text-purple-300"
+                >
+                  {secondaryActionLabel}
+                </button>
+                <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
+                  <span>или</span>
                   <Link
                     to="/"
-                    className="inline-flex items-center gap-2 text-sm font-medium text-slate-400 underline-offset-4 transition hover:text-purple-400"
+                    className="font-medium text-slate-400 underline-offset-4 transition hover:text-purple-400"
                   >
-                    <Home size={16} />
-                    <span>На главную</span>
+                    вернуться на главную
                   </Link>
                 </div>
-
-                {/* Кнопка выхода */}
-                {user && (
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="mt-6 w-full rounded-xl glass border border-white/10 px-4 py-3 text-sm font-medium text-slate-300 transition hover:border-white/20 hover:bg-white/5 hover:text-white"
-                  >
-                    Выйти из аккаунта
-                  </button>
-                )}
               </div>
-            </section>
-          </div>
 
-          {/* Footer */}
-          <footer className="mx-auto mt-16 max-w-7xl border-t border-white/5 pt-8 text-center">
-            <Link
-              to="/privacy"
-              className="text-sm text-slate-400 underline-offset-4 transition hover:text-purple-400"
-            >
-              Политика конфиденциальности
-            </Link>
-          </footer>
+              {/* Кнопка выхода */}
+              {user && (
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="mt-6 w-full rounded-xl glass border border-white/10 px-4 py-3 text-sm font-medium text-slate-300 transition hover:border-white/20 hover:bg-white/5 hover:text-white"
+                >
+                  Выйти из аккаунта
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </>
