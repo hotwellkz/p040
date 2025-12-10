@@ -10,6 +10,7 @@ import type {
   GenerationMode
 } from "../../domain/channel";
 import { createEmptyChannel } from "../../domain/channel";
+import { getTelegramStatus } from "../../api/telegramIntegration";
 
 const STEPS = [
   { id: 1, title: "Название канала" },
@@ -61,6 +62,8 @@ const ChannelWizardPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const [telegramStatus, setTelegramStatus] = useState<{ status: string } | null>(null);
+  const [telegramStatusLoading, setTelegramStatusLoading] = useState(true);
 
   const [formData, setFormData] = useState<ChannelCreatePayload>(() => {
     const empty = createEmptyChannel();
@@ -75,11 +78,46 @@ const ChannelWizardPage = () => {
       blockedTopics: empty.blockedTopics,
       extraNotes: empty.extraNotes,
       generationMode: empty.generationMode || "script",
+      generationTransport: undefined, // Будет установлено после проверки Telegram статуса
       youtubeUrl: empty.youtubeUrl || null,
       tiktokUrl: empty.tiktokUrl || null,
       instagramUrl: empty.instagramUrl || null
     };
   });
+
+  // Загружаем статус Telegram и устанавливаем дефолт для generationTransport
+  useEffect(() => {
+    const loadTelegramStatus = async () => {
+      if (!user?.uid) {
+        setTelegramStatusLoading(false);
+        return;
+      }
+      
+      try {
+        setTelegramStatusLoading(true);
+        const status = await getTelegramStatus();
+        setTelegramStatus(status);
+        
+        // Устанавливаем дефолт: если Telegram привязан - telegram_user, иначе telegram_global
+        const defaultTransport = status.status === "active" ? "telegram_user" : "telegram_global";
+        setFormData(prev => ({
+          ...prev,
+          generationTransport: prev.generationTransport || defaultTransport as any
+        }));
+      } catch (err) {
+        console.error("Failed to load Telegram status", err);
+        // При ошибке используем telegram_global как дефолт
+        setFormData(prev => ({
+          ...prev,
+          generationTransport: prev.generationTransport || "telegram_global" as any
+        }));
+      } finally {
+        setTelegramStatusLoading(false);
+      }
+    };
+
+    void loadTelegramStatus();
+  }, [user?.uid]);
 
   const canGoNext = () => {
     switch (currentStep) {
@@ -145,7 +183,12 @@ const ChannelWizardPage = () => {
     setError(null);
 
     try {
-      await createChannel(user.uid, formData);
+      // Убеждаемся, что generationTransport установлен (если не был установлен ранее)
+      const channelData: ChannelCreatePayload = {
+        ...formData,
+        generationTransport: formData.generationTransport || (telegramStatus?.status === "active" ? "telegram_user" : "telegram_global")
+      };
+      await createChannel(user.uid, channelData);
       navigate("/channels", { replace: true });
     } catch (err) {
       setError(

@@ -19,6 +19,7 @@ import Accordion from "../../components/Accordion";
 import { fetchScheduleSettings, getMinIntervalForTime, type ScheduleSettings } from "../../api/scheduleSettings";
 import { useToast } from "../../hooks/useToast";
 import Toast from "../../components/Toast";
+import TelegramGlobalPasswordModal from "../../components/TelegramGlobalPasswordModal";
 
 const PLATFORMS: { value: SupportedPlatform; label: string }[] = [
   { value: "YOUTUBE_SHORTS", label: "YouTube Shorts" },
@@ -87,6 +88,8 @@ const ChannelEditPage = () => {
   const [telegramStatus, setTelegramStatus] = useState<{ status: string } | null>(null);
   const [telegramStatusLoading, setTelegramStatusLoading] = useState(true);
   const [scheduleSettings, setScheduleSettings] = useState<ScheduleSettings | null>(null);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [pendingTransportChange, setPendingTransportChange] = useState<"telegram_global" | null>(null);
 
   useEffect(() => {
     if (!user?.uid || !channelId) {
@@ -834,12 +837,32 @@ const ChannelEditPage = () => {
               <div className="grid gap-3 sm:grid-cols-2">
                 <button
                   type="button"
-                  onClick={() =>
-                    setChannel({
-                      ...channel,
-                      generationTransport: "telegram_global"
-                    })
-                  }
+                  onClick={() => {
+                    const currentTransport = channel.generationTransport || "telegram_global";
+                    // Если уже выбран общий аккаунт, просто переключаем
+                    if (currentTransport === "telegram_global") {
+                      setChannel({
+                        ...channel,
+                        generationTransport: "telegram_global"
+                      });
+                      return;
+                    }
+                    
+                    // Проверяем, был ли уже введён пароль в этой сессии
+                    const canUseGlobal = sessionStorage.getItem("canUseGlobalTelegram") === "true";
+                    
+                    if (canUseGlobal) {
+                      // Пароль уже проверен, переключаем
+                      setChannel({
+                        ...channel,
+                        generationTransport: "telegram_global"
+                      });
+                    } else {
+                      // Нужно ввести пароль
+                      setPendingTransportChange("telegram_global");
+                      setShowPasswordModal(true);
+                    }
+                  }}
                   className={`rounded-xl border px-4 py-3 text-left transition-all duration-200 ${
                     (channel.generationTransport || "telegram_global") === "telegram_global"
                       ? "border-brand bg-brand/10 text-white shadow-md shadow-brand/20"
@@ -850,6 +873,11 @@ const ChannelEditPage = () => {
                   <div className="mt-1 text-xs text-slate-400">
                     Использовать системный Telegram аккаунт
                   </div>
+                  {(channel.generationTransport || "telegram_global") === "telegram_global" && (
+                    <div className="mt-2 text-[10px] text-amber-400/80">
+                      Общий системный аккаунт (доступен только с админ-паролем)
+                    </div>
+                  )}
                 </button>
                 <button
                   type="button"
@@ -859,15 +887,20 @@ const ChannelEditPage = () => {
                       generationTransport: "telegram_user"
                     })
                   }
+                  disabled={telegramStatusLoading || telegramStatus?.status !== "active"}
                   className={`rounded-xl border px-4 py-3 text-left transition-all duration-200 ${
                     channel.generationTransport === "telegram_user"
                       ? "border-brand bg-brand/10 text-white shadow-md shadow-brand/20"
+                      : telegramStatusLoading || telegramStatus?.status !== "active"
+                      ? "border-white/5 bg-slate-950/30 text-slate-500 cursor-not-allowed"
                       : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40 hover:bg-slate-900/80"
                   }`}
                 >
                   <div className="font-semibold">Telegram (мой аккаунт)</div>
                   <div className="mt-1 text-xs text-slate-400">
-                    Отправлять от вашего личного Telegram
+                    {telegramStatusLoading || telegramStatus?.status !== "active"
+                      ? "Привяжите Telegram в настройках аккаунта, чтобы отправлять промпты от своего имени"
+                      : "Отправлять от вашего личного Telegram"}
                   </div>
                 </button>
               </div>
@@ -1844,6 +1877,25 @@ const ChannelEditPage = () => {
           </div>
         </form>
       </div>
+      
+      {/* Модальное окно для ввода пароля */}
+      <TelegramGlobalPasswordModal
+        isOpen={showPasswordModal}
+        onClose={() => {
+          setShowPasswordModal(false);
+          setPendingTransportChange(null);
+        }}
+        onSuccess={() => {
+          if (pendingTransportChange === "telegram_global") {
+            setChannel({
+              ...channel!,
+              generationTransport: "telegram_global"
+            });
+          }
+          setPendingTransportChange(null);
+        }}
+        channelName={channel?.name}
+      />
     </div>
   );
 };

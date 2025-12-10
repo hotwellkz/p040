@@ -69,6 +69,7 @@ export const channelRepository: ChannelRepository = {
       tone: data.tone,
       blockedTopics: data.blockedTopics,
       generationMode: data.generationMode || "script",
+      generationTransport: data.generationTransport || "telegram_global",
       telegramAutoSendEnabled: data.telegramAutoSendEnabled ?? false,
       telegramAutoScheduleEnabled: data.telegramAutoScheduleEnabled ?? false,
       autoSendEnabled: data.autoSendEnabled ?? false,

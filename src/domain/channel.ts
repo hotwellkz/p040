@@ -118,7 +118,9 @@ export const channelConverter: FirestoreDataConverter<Channel> = {
       tone: rest.tone,
       blockedTopics: rest.blockedTopics,
       generationMode: rest.generationMode || "script",
-      generationTransport: rest.generationTransport || "telegram_global",
+      // generationTransport устанавливается при создании канала на основе статуса Telegram пользователя
+      // Если не указан явно, используем telegram_global для обратной совместимости
+      generationTransport: rest.generationTransport ?? "telegram_global",
       telegramSyntaxPeer: rest.telegramSyntaxPeer ?? null,
       // Явно устанавливаем autoSendEnabled, чтобы Firestore сохранил его
       autoSendEnabled: rest.autoSendEnabled ?? false,
