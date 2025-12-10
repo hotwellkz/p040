@@ -5,6 +5,7 @@ const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
 export interface UserSettings {
   defaultBlottataApiKey: string | null;
   hasDefaultBlottataApiKey: boolean;
+  hasSeenChannelWizard?: boolean;
 }
 
 export interface UserSettingsResponse {
@@ -46,7 +47,8 @@ export async function getUserSettings(): Promise<UserSettings> {
  * Обновляет настройки пользователя
  */
 export async function updateUserSettings(settings: {
-  defaultBlottataApiKey: string | null;
+  defaultBlottataApiKey?: string | null;
+  hasSeenChannelWizard?: boolean;
 }): Promise<void> {
   const token = await getAuthToken();
   const response = await fetch(`${API_BASE}/api/user-settings`, {

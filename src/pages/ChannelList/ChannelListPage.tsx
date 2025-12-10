@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Loader2, Plus, Video, Wand2, Calendar, MoreVertical, Bell, Grid3x3, List, User, LogOut, Search, X, AlignJustify, Play, Edit2, Download, Upload } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   DndContext,
   closestCenter,
@@ -30,6 +30,7 @@ import type { Channel } from "../../domain/channel";
 import { calculateChannelStates, type ChannelStateInfo } from "../../utils/channelAutomationState";
 import { fetchScheduleSettings } from "../../api/scheduleSettings";
 import { getAuthToken } from "../../utils/auth";
+import { getUserSettings, updateUserSettings } from "../../api/userSettings";
 
 const backendBaseUrl =
   (import.meta.env.VITE_BACKEND_URL as string | undefined) ||
@@ -37,6 +38,7 @@ const backendBaseUrl =
 
 const ChannelListPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuthStore((state) => ({
     user: state.user,
     logout: state.logout
@@ -160,6 +162,54 @@ const ChannelListPage = () => {
       void fetchChannels(user.uid);
     }
   }, [user?.uid, fetchChannels]);
+
+  // Автоматический редирект на мастер для новых пользователей
+  useEffect(() => {
+    const checkAndRedirectToWizard = async () => {
+      // Пропускаем, если каналы ещё загружаются
+      if (loading) {
+        return;
+      }
+
+      // Пропускаем, если уже на странице мастера
+      if (location.pathname === "/channels/new") {
+        return;
+      }
+
+      // Если есть ошибка загрузки каналов, не редиректим
+      // чтобы не создавать ложное ощущение, что у пользователя нет каналов
+      if (error) {
+        return;
+      }
+
+      // Если каналов нет, проверяем флаг hasSeenChannelWizard
+      if (channels.length === 0 && user?.uid) {
+        try {
+          const settings = await getUserSettings();
+          
+          // Если пользователь ещё не видел мастер, редиректим его туда
+          if (!settings.hasSeenChannelWizard) {
+            // Устанавливаем флаг, что мастер был показан
+            try {
+              await updateUserSettings({ hasSeenChannelWizard: true });
+            } catch (updateError) {
+              // Игнорируем ошибку обновления флага - не критично
+              console.warn("Failed to update hasSeenChannelWizard flag:", updateError);
+            }
+            
+            // Редиректим на мастер создания канала
+            navigate("/channels/new", { replace: true });
+          }
+        } catch (settingsError) {
+          // Если не удалось получить настройки, не редиректим
+          // чтобы не создавать ложное ощущение, что у пользователя нет каналов
+          console.error("Failed to check user settings for wizard redirect:", settingsError);
+        }
+      }
+    };
+
+    void checkAndRedirectToWizard();
+  }, [channels.length, loading, error, user?.uid, navigate, location.pathname]);
 
   // Загружаем настройки расписания для получения minIntervalMinutes
   useEffect(() => {

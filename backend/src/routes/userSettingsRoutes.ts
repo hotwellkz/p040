@@ -28,7 +28,9 @@ router.get("/", authRequired, async (req, res) => {
       return res.json({
         success: true,
         settings: {
-          defaultBlottataApiKey: null
+          defaultBlottataApiKey: null,
+          hasDefaultBlottataApiKey: false,
+          hasSeenChannelWizard: false
         }
       });
     }
@@ -54,7 +56,8 @@ router.get("/", authRequired, async (req, res) => {
       success: true,
       settings: {
         defaultBlottataApiKey: defaultBlottataApiKey ? "****" : null, // Возвращаем маскированное значение
-        hasDefaultBlottataApiKey: !!defaultBlottataApiKey
+        hasDefaultBlottataApiKey: !!defaultBlottataApiKey,
+        hasSeenChannelWizard: data?.hasSeenChannelWizard ?? false
       }
     });
   } catch (error: any) {
@@ -87,11 +90,12 @@ router.put("/", authRequired, async (req, res) => {
 
   try {
     const userId = req.user!.uid;
-    const { defaultBlottataApiKey } = req.body;
+    const { defaultBlottataApiKey, hasSeenChannelWizard } = req.body;
 
     Logger.info("PUT /api/user-settings: updating settings", {
       userId,
-      hasDefaultBlottataApiKey: !!defaultBlottataApiKey
+      hasDefaultBlottataApiKey: !!defaultBlottataApiKey,
+      hasSeenChannelWizard
     });
 
     const settingsRef = db.collection("users").doc(userId).collection("settings").doc("account");
@@ -122,6 +126,11 @@ router.put("/", authRequired, async (req, res) => {
           });
         }
       }
+    }
+
+    // Если передан флаг hasSeenChannelWizard, сохраняем его
+    if (hasSeenChannelWizard !== undefined) {
+      updateData.hasSeenChannelWizard = Boolean(hasSeenChannelWizard);
     }
 
     await settingsRef.set(updateData, { merge: true });

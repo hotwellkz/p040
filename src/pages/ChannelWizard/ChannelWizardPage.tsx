@@ -629,7 +629,7 @@ const ChannelWizardPage = () => {
                 setFormData({ ...formData, name: e.target.value })
               }
               placeholder="Например: Мой канал про технологии"
-              className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-brand focus:ring-2 focus:ring-brand/40 md:rounded-xl md:px-4 md:py-3"
+              className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition-all placeholder:text-slate-500 focus:border-brand focus:ring-2 focus:ring-brand/40 focus:shadow-lg focus:shadow-brand/20 md:rounded-2xl md:px-5 md:py-3.5"
               autoFocus
             />
             <p className="text-xs text-slate-400 md:text-sm">
@@ -779,7 +779,7 @@ const ChannelWizardPage = () => {
                 setFormData({ ...formData, niche: e.target.value })
               }
               placeholder="Например: Технологии, Кулинария, Спорт, Образование"
-              className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-brand focus:ring-2 focus:ring-brand/40 md:rounded-xl md:px-4 md:py-3"
+              className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition-all placeholder:text-slate-500 focus:border-brand focus:ring-2 focus:ring-brand/40 focus:shadow-lg focus:shadow-brand/20 md:rounded-2xl md:px-5 md:py-3.5"
               autoFocus
             />
             <p className="text-xs text-slate-400 md:text-sm">
@@ -787,17 +787,17 @@ const ChannelWizardPage = () => {
             </p>
 
             {/* Популярные ниши (чипсы) */}
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <p className="text-xs text-slate-400 md:text-sm">
                 Популярные варианты:
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 md:gap-2.5">
                 {POPULAR_NICHES.map((niche) => (
                   <button
                     key={niche}
                     type="button"
                     onClick={() => handleNicheChipClick(niche)}
-                    className="rounded-lg border border-white/10 bg-slate-950/60 px-3 py-1.5 text-xs text-slate-300 transition hover:border-brand/40 hover:bg-brand/10 hover:text-white md:px-4 md:py-2 md:text-sm"
+                    className="rounded-lg border border-white/10 bg-slate-950/60 px-3 py-1.5 text-xs text-slate-300 transition-all hover:border-brand/40 hover:bg-brand/10 hover:text-white hover:scale-105 md:px-4 md:py-2 md:text-sm"
                   >
                     {niche}
                   </button>
@@ -806,12 +806,12 @@ const ChannelWizardPage = () => {
             </div>
 
             {/* Кнопка генерации ниши */}
-            <div className="pt-2">
+            <div className="pt-3">
               <button
                 type="button"
                 onClick={handleGenerateNiche}
                 disabled={nicheGenerating}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-brand/40 bg-brand/10 px-4 py-2.5 text-sm font-medium text-brand transition hover:bg-brand/20 hover:border-brand/60 disabled:opacity-50 disabled:cursor-not-allowed md:py-3"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-brand/40 bg-gradient-to-r from-brand/10 to-brand/5 px-4 py-3 text-sm font-medium text-brand transition-all hover:border-brand/60 hover:from-brand/20 hover:to-brand/10 hover:shadow-lg hover:shadow-brand/20 disabled:opacity-50 disabled:cursor-not-allowed md:py-3.5"
               >
                 {nicheGenerating ? (
                   <>
@@ -857,7 +857,7 @@ const ChannelWizardPage = () => {
               }
               placeholder="Например: Молодёжь 18-25 лет, интересующаяся технологиями"
               rows={4}
-              className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-brand focus:ring-2 focus:ring-brand/40 md:rounded-xl md:px-4 md:py-3"
+              className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition-all placeholder:text-slate-500 focus:border-brand focus:ring-2 focus:ring-brand/40 focus:shadow-lg focus:shadow-brand/20 md:rounded-2xl md:px-5 md:py-3.5"
               autoFocus
             />
             <p className="text-xs text-slate-400 md:text-sm">
@@ -865,17 +865,17 @@ const ChannelWizardPage = () => {
             </p>
 
             {/* Популярные целевые аудитории (чипсы) */}
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <p className="text-xs text-slate-400 md:text-sm">
                 Типовые варианты:
               </p>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              <div className="flex flex-wrap gap-2 md:gap-2.5">
                 {POPULAR_AUDIENCES.map((audience) => (
                   <button
                     key={audience}
                     type="button"
                     onClick={() => handleAudienceChipClick(audience)}
-                    className="rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2 text-left text-xs text-slate-300 transition hover:border-brand/40 hover:bg-brand/10 hover:text-white md:px-4 md:py-2.5 md:text-sm"
+                    className="rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2 text-left text-xs text-slate-300 transition-all hover:border-brand/40 hover:bg-brand/10 hover:text-white hover:scale-105 md:px-4 md:py-2.5 md:text-sm"
                   >
                     {audience}
                   </button>
@@ -884,12 +884,12 @@ const ChannelWizardPage = () => {
             </div>
 
             {/* Кнопка генерации целевой аудитории */}
-            <div className="pt-2">
+            <div className="pt-3">
               <button
                 type="button"
                 onClick={handleGenerateTargetAudience}
                 disabled={audienceGenerating}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-brand/40 bg-brand/10 px-4 py-2.5 text-sm font-medium text-brand transition hover:bg-brand/20 hover:border-brand/60 disabled:opacity-50 disabled:cursor-not-allowed md:py-3"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-brand/40 bg-gradient-to-r from-brand/10 to-brand/5 px-4 py-3 text-sm font-medium text-brand transition-all hover:border-brand/60 hover:from-brand/20 hover:to-brand/10 hover:shadow-lg hover:shadow-brand/20 disabled:opacity-50 disabled:cursor-not-allowed md:py-3.5"
               >
                 {audienceGenerating ? (
                   <>
@@ -976,7 +976,7 @@ const ChannelWizardPage = () => {
               }
               placeholder="Например: Политика, Насилие, Нецензурная лексика"
               rows={4}
-              className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-brand focus:ring-2 focus:ring-brand/40 md:rounded-xl md:px-4 md:py-3"
+              className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition-all placeholder:text-slate-500 focus:border-brand focus:ring-2 focus:ring-brand/40 focus:shadow-lg focus:shadow-brand/20 md:rounded-2xl md:px-5 md:py-3.5"
               autoFocus
             />
             <p className="text-xs text-slate-400 md:text-sm">
@@ -984,17 +984,17 @@ const ChannelWizardPage = () => {
             </p>
 
             {/* Популярные запрещённые темы (чипсы) */}
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <p className="text-xs text-slate-400 md:text-sm">
                 Типовые варианты:
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 md:gap-2.5">
                 {COMMON_FORBIDDEN_TOPICS.map((topic) => (
                   <button
                     key={topic}
                     type="button"
                     onClick={() => handleForbiddenTopicChipClick(topic)}
-                    className="rounded-lg border border-white/10 bg-slate-950/60 px-3 py-1.5 text-xs text-slate-300 transition hover:border-brand/40 hover:bg-brand/10 hover:text-white md:px-4 md:py-2 md:text-sm"
+                    className="rounded-lg border border-white/10 bg-slate-950/60 px-3 py-1.5 text-xs text-slate-300 transition-all hover:border-brand/40 hover:bg-brand/10 hover:text-white hover:scale-105 md:px-4 md:py-2 md:text-sm"
                   >
                     {topic}
                   </button>
@@ -1003,12 +1003,12 @@ const ChannelWizardPage = () => {
             </div>
 
             {/* Кнопка генерации запрещённых тем */}
-            <div className="pt-2">
+            <div className="pt-3">
               <button
                 type="button"
                 onClick={handleGenerateForbiddenTopics}
                 disabled={forbiddenTopicsGenerating}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-brand/40 bg-brand/10 px-4 py-2.5 text-sm font-medium text-brand transition hover:bg-brand/20 hover:border-brand/60 disabled:opacity-50 disabled:cursor-not-allowed md:py-3"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-brand/40 bg-gradient-to-r from-brand/10 to-brand/5 px-4 py-3 text-sm font-medium text-brand transition-all hover:border-brand/60 hover:from-brand/20 hover:to-brand/10 hover:shadow-lg hover:shadow-brand/20 disabled:opacity-50 disabled:cursor-not-allowed md:py-3.5"
               >
                 {forbiddenTopicsGenerating ? (
                   <>
@@ -1043,7 +1043,7 @@ const ChannelWizardPage = () => {
                 label="Режим генерации"
               />
             </div>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 md:gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 md:gap-4">
               <button
                 type="button"
                 onClick={() =>
@@ -1052,14 +1052,14 @@ const ChannelWizardPage = () => {
                     generationMode: "script"
                   })
                 }
-                className={`min-h-[44px] rounded-lg border px-3 py-2.5 text-left transition md:rounded-xl md:px-4 md:py-4 ${
+                className={`relative min-h-[80px] rounded-xl border px-4 py-3 text-left transition-all shadow-lg md:rounded-2xl md:px-5 md:py-4 ${
                   formData.generationMode === "script"
-                    ? "border-brand bg-brand/10 text-white"
-                    : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40"
+                    ? "border-brand bg-gradient-to-br from-brand/20 to-brand/10 text-white shadow-brand/20"
+                    : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40 hover:shadow-xl"
                 }`}
               >
-                <div className="text-sm font-semibold md:text-base">Сценарий</div>
-                <div className="mt-0.5 text-[10px] text-slate-400 md:mt-1 md:text-xs">
+                <div className="text-sm font-bold md:text-base">Сценарий</div>
+                <div className="mt-1.5 text-[10px] text-slate-400 md:mt-2 md:text-xs">
                   Только подробный сценарий
                 </div>
               </button>
@@ -1071,14 +1071,14 @@ const ChannelWizardPage = () => {
                     generationMode: "prompt"
                   })
                 }
-                className={`min-h-[44px] rounded-lg border px-3 py-2.5 text-left transition md:rounded-xl md:px-4 md:py-4 ${
+                className={`min-h-[80px] rounded-xl border px-4 py-3 text-left transition-all shadow-lg md:rounded-2xl md:px-5 md:py-4 ${
                   formData.generationMode === "prompt"
-                    ? "border-brand bg-brand/10 text-white"
-                    : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40"
+                    ? "border-brand bg-gradient-to-br from-brand/20 to-brand/10 text-white shadow-brand/20"
+                    : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40 hover:shadow-xl"
                 }`}
               >
-                <div className="text-sm font-semibold md:text-base">Сценарий + промпт для видео</div>
-                <div className="mt-0.5 text-[10px] text-slate-400 md:mt-1 md:text-xs">
+                <div className="text-sm font-bold md:text-base">Сценарий + промпт для видео</div>
+                <div className="mt-1.5 text-[10px] text-slate-400 md:mt-2 md:text-xs">
                   Сценарий + VIDEO_PROMPT для Sora/Veo
                 </div>
               </button>
@@ -1090,18 +1090,18 @@ const ChannelWizardPage = () => {
                     generationMode: "video-prompt-only"
                   })
                 }
-                className={`relative min-h-[44px] rounded-lg border px-3 py-2.5 text-left transition md:rounded-xl md:px-4 md:py-4 ${
+                className={`relative min-h-[80px] rounded-xl border px-4 py-3 text-left transition-all shadow-lg md:rounded-2xl md:px-5 md:py-4 ${
                   (formData.generationMode || "video-prompt-only") === "video-prompt-only"
-                    ? "border-brand bg-brand/10 text-white"
-                    : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40"
+                    ? "border-brand bg-gradient-to-br from-brand/20 to-brand/10 text-white shadow-brand/20"
+                    : "border-white/10 bg-slate-950/60 text-slate-300 hover:border-brand/40 hover:shadow-xl"
                 }`}
               >
                 {/* Бейдж "Рекомендуется для автоматизации" */}
-                <div className="absolute right-2 top-2 rounded-full bg-brand/20 px-2 py-0.5 text-[9px] font-medium text-brand md:right-3 md:top-3 md:px-2.5 md:text-[10px]">
+                <div className="absolute right-2 top-2 rounded-full bg-gradient-to-r from-brand/30 to-brand/20 px-2.5 py-1 text-[9px] font-bold text-brand shadow-lg shadow-brand/20 md:right-3 md:top-3 md:px-3 md:text-[10px]">
                   Рекомендуется для автоматизации
                 </div>
-                <div className="text-sm font-semibold md:text-base pr-16 md:pr-20">Промпт для видео</div>
-                <div className="mt-0.5 text-[10px] text-slate-400 md:mt-1 md:text-xs">
+                <div className="text-sm font-bold md:text-base pr-20 md:pr-24">Промпт для видео</div>
+                <div className="mt-1.5 text-[10px] text-slate-400 md:mt-2 md:text-xs">
                   Только VIDEO_PROMPT для Sora/Veo без текста сценария
                 </div>
               </button>
@@ -1163,19 +1163,19 @@ const ChannelWizardPage = () => {
               onChange={handleExtraNotesChange}
               placeholder="Любые дополнительные требования к сценариям... Например: «бабушка и дедушка — казахи», особенности персонажей, сеттинг, стиль съёмки."
               rows={5}
-              className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-brand focus:ring-2 focus:ring-brand/40 min-h-[120px] h-auto resize-y overflow-auto md:rounded-xl md:px-4 md:py-3 md:min-h-[140px]"
+              className="w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition-all placeholder:text-slate-500 focus:border-brand focus:ring-2 focus:ring-brand/40 focus:shadow-lg focus:shadow-brand/20 min-h-[120px] h-auto resize-y overflow-auto md:rounded-2xl md:px-5 md:py-3.5 md:min-h-[140px]"
             />
             <p className="text-xs text-slate-400 md:text-sm">
               Этот блок используется как обязательные условия при генерации сценария и VIDEO_PROMPT, поэтому подробно опишите важные детали (национальность, характеры, стиль и т.п.).
             </p>
 
             {/* Кнопка генерации дополнительных пожеланий */}
-            <div className="pt-2">
+            <div className="pt-3">
               <button
                 type="button"
                 onClick={handleGenerateAdditionalPreferences}
                 disabled={additionalPreferencesGenerating}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-brand/40 bg-brand/10 px-4 py-2.5 text-sm font-medium text-brand transition hover:bg-brand/20 hover:border-brand/60 disabled:opacity-50 disabled:cursor-not-allowed md:py-3"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-brand/40 bg-gradient-to-r from-brand/10 to-brand/5 px-4 py-3 text-sm font-medium text-brand transition-all hover:border-brand/60 hover:from-brand/20 hover:to-brand/10 hover:shadow-lg hover:shadow-brand/20 disabled:opacity-50 disabled:cursor-not-allowed md:py-3.5"
               >
                 {additionalPreferencesGenerating ? (
                   <>
@@ -1205,119 +1205,142 @@ const ChannelWizardPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      <div className="mx-auto w-full max-w-3xl px-3 py-4 md:px-4 md:py-10">
-        {/* Шапка - компактная на мобильных */}
-        <div className="mb-4 flex items-center gap-2 md:mb-8 md:gap-4">
-          <button
-            type="button"
-            onClick={() => navigate("/channels")}
-            className="flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl border border-white/10 bg-slate-900/60 text-slate-300 transition hover:border-brand/40 hover:text-white md:px-4 md:py-2"
-            title="Назад"
-          >
-            <ArrowLeft size={18} className="md:mr-2" />
-            <span className="hidden md:inline">Назад</span>
-          </button>
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <Sparkles size={18} className="text-brand-light flex-shrink-0 md:w-5 md:h-5" />
-            <h1 className="text-lg font-semibold truncate md:text-2xl">Мастер создания канала</h1>
-          </div>
-        </div>
-
-        {/* Индикатор шагов - упрощенный на мобильных */}
-        <div className="mb-4 md:mb-8">
-          {/* Десктопная версия - полный индикатор */}
-          <div className="hidden md:block">
-            <div className="flex items-center justify-between overflow-x-auto pb-2">
-              {effectiveSteps.map((step, index) => {
-                const stepNumber = index + 1;
-                return (
-                  <div key={step.id} className="flex items-center flex-1 min-w-0">
-                    <div className="flex flex-col items-center flex-1 min-w-0">
-                      <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition flex-shrink-0 ${
-                          currentStep > stepNumber
-                            ? "border-brand bg-brand text-white"
-                            : currentStep === stepNumber
-                            ? "border-brand bg-brand/20 text-brand-light"
-                            : "border-white/20 bg-slate-900/60 text-slate-400"
-                        }`}
-                      >
-                        {currentStep > stepNumber ? (
-                          <Check size={18} />
-                        ) : (
-                          <span className="text-sm font-semibold">{stepNumber}</span>
-                        )}
-                      </div>
-                      <span
-                        className={`mt-2 text-xs text-center max-w-[100px] truncate ${
-                          currentStep === stepNumber
-                            ? "text-brand-light font-medium"
-                            : "text-slate-500"
-                        }`}
-                        title={step.title}
-                      >
-                        {step.title}
-                      </span>
-                    </div>
-                    {index < effectiveSteps.length - 1 && (
-                      <div
-                        className={`h-0.5 flex-1 mx-2 transition ${
-                          currentStep > stepNumber ? "bg-brand" : "bg-white/10"
-                        }`}
-                      />
-                    )}
-                  </div>
-                );
-              })}
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900 text-white">
+      <div className="mx-auto w-full max-w-[1100px] px-4 py-5 sm:px-6 sm:py-6 md:px-8 md:py-10 lg:px-10">
+        {/* Шапка с градиентным фоном */}
+        <div className="mb-5 rounded-2xl bg-gradient-to-r from-slate-900/80 via-slate-800/60 to-slate-900/80 p-4 shadow-xl shadow-brand/5 md:mb-8 md:p-6">
+          <div className="mb-4 flex items-center gap-3 md:mb-6 md:gap-4">
+            <button
+              type="button"
+              onClick={() => navigate("/channels")}
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-white/10 bg-slate-900/60 text-slate-300 transition-all hover:border-brand/40 hover:bg-brand/10 hover:text-white md:px-4 md:py-2.5"
+              title="Назад"
+            >
+              <ArrowLeft size={18} className="md:mr-2" />
+              <span className="hidden md:inline">Назад</span>
+            </button>
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <Sparkles size={20} className="text-brand-light flex-shrink-0 md:w-6 md:h-6" />
+              <h1 className="text-xl font-bold truncate bg-gradient-to-r from-white to-slate-200 bg-clip-text text-transparent md:text-3xl">
+                Мастер создания канала
+              </h1>
             </div>
           </div>
 
-          {/* Мобильная версия - горизонтальный скролл по шагам */}
-          <div className="md:hidden">
-            <div className="overflow-x-auto -mx-3 px-3 pb-2">
-              <div className="flex items-center gap-2 min-w-max">
+          {/* Индикатор шагов - адаптивный stepper */}
+          <div>
+            {/* Десктопная версия (≥1024px) - двухуровневый stepper */}
+            <div className="hidden lg:block">
+              {/* Верхний уровень: заголовок с текущим шагом */}
+              <div className="mb-4 text-center">
+                <h2 className="text-lg font-bold text-white md:text-xl">
+                  Шаг {currentStep} из {totalSteps}:{" "}
+                  <span className="text-brand-light">
+                    {effectiveSteps[currentStep - 1]?.title || "Неизвестный шаг"}
+                  </span>
+                </h2>
+              </div>
+
+              {/* Нижний уровень: индикаторы-кружки с автоматическим переносом */}
+              <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3">
                 {effectiveSteps.map((step, index) => {
                   const stepNumber = index + 1;
+                  const isCompleted = currentStep > stepNumber;
+                  const isActive = currentStep === stepNumber;
+                  
                   return (
-                    <div key={step.id} className="flex items-center flex-shrink-0">
-                      <div className="flex flex-col items-center">
-                        <div
-                          className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition ${
-                            currentStep > stepNumber
-                              ? "border-brand bg-brand text-white"
-                              : currentStep === stepNumber
-                              ? "border-brand bg-brand/20 text-brand-light"
-                              : "border-white/20 bg-slate-900/60 text-slate-400"
-                          }`}
-                        >
-                          {currentStep > stepNumber ? (
-                            <Check size={14} />
-                          ) : (
-                            <span className="text-xs font-semibold">{stepNumber}</span>
-                          )}
-                        </div>
-                      </div>
-                      {index < effectiveSteps.length - 1 && (
-                        <div
-                          className={`h-0.5 w-3 mx-1 transition ${
-                            currentStep > stepNumber ? "bg-brand" : "bg-white/10"
-                          }`}
-                        />
+                    <div
+                      key={step.id}
+                      className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all duration-300 flex-shrink-0 ${
+                        isCompleted
+                          ? "border-brand bg-gradient-to-br from-brand to-brand-dark text-white shadow-lg shadow-brand/30 scale-100"
+                          : isActive
+                          ? "border-brand bg-brand/20 text-brand-light shadow-lg shadow-brand/20 scale-110 ring-2 ring-brand/30"
+                          : "border-white/20 bg-slate-900/60 text-slate-400 hover:border-white/30 hover:bg-slate-800/60"
+                      }`}
+                      title={`${stepNumber}. ${step.title}`}
+                    >
+                      {isCompleted ? (
+                        <Check size={14} className="text-white" />
+                      ) : (
+                        <span className="text-xs font-bold">{stepNumber}</span>
                       )}
                     </div>
                   );
                 })}
               </div>
             </div>
+
+            {/* Планшетная версия (768px - 1023px) - компактные кружки с переносом */}
+            <div className="hidden md:block lg:hidden">
+              {/* Верхний уровень: заголовок */}
+              <div className="mb-3 text-center">
+                <h2 className="text-base font-bold text-white">
+                  Шаг {currentStep} из {totalSteps}:{" "}
+                  <span className="text-brand-light">
+                    {effectiveSteps[currentStep - 1]?.title || "Неизвестный шаг"}
+                  </span>
+                </h2>
+              </div>
+
+              {/* Нижний уровень: компактные индикаторы */}
+              <div className="flex flex-wrap items-center justify-center gap-1.5">
+                {effectiveSteps.map((step, index) => {
+                  const stepNumber = index + 1;
+                  const isCompleted = currentStep > stepNumber;
+                  const isActive = currentStep === stepNumber;
+                  
+                  return (
+                    <div
+                      key={step.id}
+                      className={`flex h-7 w-7 items-center justify-center rounded-full border-2 transition-all duration-300 flex-shrink-0 ${
+                        isCompleted
+                          ? "border-brand bg-gradient-to-br from-brand to-brand-dark text-white shadow-md shadow-brand/20"
+                          : isActive
+                          ? "border-brand bg-brand/20 text-brand-light shadow-md shadow-brand/15 scale-110"
+                          : "border-white/20 bg-slate-900/60 text-slate-400"
+                      }`}
+                      title={`${stepNumber}. ${step.title}`}
+                    >
+                      {isCompleted ? (
+                        <Check size={12} className="text-white" />
+                      ) : (
+                        <span className="text-[10px] font-bold">{stepNumber}</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Мобильная версия (<768px) - только progress bar */}
+            <div className="md:hidden">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-sm font-bold text-white">
+                  Шаг {currentStep} из {totalSteps}
+                </span>
+                <span className="text-xs font-medium text-slate-400">
+                  {Math.round((currentStep / totalSteps) * 100)}%
+                </span>
+              </div>
+              <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-slate-800/60 shadow-inner">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-brand via-brand-light to-brand-dark transition-all duration-500 ease-out shadow-lg shadow-brand/40"
+                  style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+                />
+              </div>
+              <p className="mt-2 text-xs font-semibold text-brand-light text-center">
+                {effectiveSteps[currentStep - 1]?.title || "Неизвестный шаг"}
+              </p>
+            </div>
           </div>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="rounded-xl border border-white/10 bg-slate-900/60 p-4 shadow-2xl shadow-brand/10 md:rounded-2xl md:p-8">
-            <div className="mb-3 md:mb-6" ref={contentRef}>
-              <h2 className="text-base font-semibold text-white md:text-xl">
-                Шаг {currentStep} из {totalSteps}: {effectiveSteps[currentStep - 1]?.title || "Неизвестный шаг"}
+          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-900/80 p-5 shadow-2xl shadow-brand/10 backdrop-blur-sm md:rounded-3xl md:p-8 lg:p-10">
+            <div className="mb-4 md:mb-6" ref={contentRef}>
+              <h2 className="text-lg font-bold text-white md:text-2xl lg:hidden">
+                {effectiveSteps[currentStep - 1]?.title || "Неизвестный шаг"}
               </h2>
             </div>
 
@@ -1327,18 +1350,20 @@ const ChannelWizardPage = () => {
               </div>
             )}
 
-            <div className="min-h-[200px] md:min-h-[300px] pb-20 md:pb-0">{renderStepContent()}</div>
+            <div className="min-h-[200px] md:min-h-[300px] pb-24 md:pb-0 fade-in">
+              {renderStepContent()}
+            </div>
 
-            {/* Кнопки навигации - закреплены внизу на мобильных */}
-            <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center gap-2 border-t border-white/10 bg-slate-950/95 p-3 backdrop-blur-sm md:relative md:bottom-auto md:left-auto md:right-auto md:z-auto md:mt-8 md:border-t-0 md:bg-transparent md:backdrop-blur-none md:p-0">
+            {/* Кнопки навигации */}
+            <div className="fixed bottom-0 left-0 right-0 z-40 flex flex-col-reverse gap-2 border-t border-white/10 bg-slate-950/95 p-4 backdrop-blur-md sm:flex-row md:relative md:bottom-auto md:left-auto md:right-auto md:z-auto md:mt-8 md:border-t-0 md:bg-transparent md:backdrop-blur-none md:p-0">
               <button
                 type="button"
                 onClick={handleBack}
                 disabled={currentStep === 1}
-                className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-slate-950/60 px-4 py-2.5 text-sm font-medium text-slate-300 transition disabled:cursor-not-allowed disabled:opacity-50 hover:border-brand/40 hover:text-white md:flex-initial md:px-5 md:py-3"
+                className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-slate-950/60 px-5 py-3 text-sm font-medium text-slate-300 transition-all disabled:cursor-not-allowed disabled:opacity-50 hover:border-brand/40 hover:bg-brand/10 hover:text-white md:flex-initial md:px-6 md:py-3"
               >
-                <ArrowLeft size={16} />
-                <span className="hidden sm:inline">Назад</span>
+                <ArrowLeft size={18} />
+                <span>Назад</span>
               </button>
 
               {currentStep < totalSteps ? (
@@ -1346,27 +1371,26 @@ const ChannelWizardPage = () => {
                   type="button"
                   onClick={handleNext}
                   disabled={!canGoNext()}
-                  className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50 hover:bg-brand-dark md:flex-initial md:px-5 md:py-3"
+                  className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand to-brand-dark px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-brand/30 transition-all disabled:cursor-not-allowed disabled:opacity-50 hover:scale-[1.02] hover:shadow-xl hover:shadow-brand/40 md:flex-initial md:px-6 md:py-3"
                 >
                   <span>Далее</span>
-                  <ArrowRight size={16} />
+                  <ArrowRight size={18} />
                 </button>
               ) : (
                 <button
                   type="submit"
                   disabled={loading || !canGoNext()}
-                  className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50 hover:bg-brand-dark md:flex-initial md:px-5 md:py-3"
+                  className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand to-brand-dark px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-brand/30 transition-all disabled:cursor-not-allowed disabled:opacity-50 hover:scale-[1.02] hover:shadow-xl hover:shadow-brand/40 md:flex-initial md:px-6 md:py-3"
                 >
                   {loading ? (
                     <>
-                      <Loader2 size={16} className="animate-spin" />
-                      <span className="hidden sm:inline">Создание...</span>
+                      <Loader2 size={18} className="animate-spin" />
+                      <span>Создание...</span>
                     </>
                   ) : (
                     <>
-                      <Check size={16} />
-                      <span className="hidden sm:inline">Создать канал</span>
-                      <span className="sm:hidden">Создать</span>
+                      <Check size={18} />
+                      <span>Создать канал</span>
                     </>
                   )}
                 </button>
