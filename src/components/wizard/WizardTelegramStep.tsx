@@ -168,6 +168,26 @@ export function WizardTelegramStep({ onComplete, onSkip }: WizardTelegramStepPro
         Привяжите свой Telegram аккаунт для отправки промптов от вашего имени. Это необходимо для автоматической работы с ботом Syntax.
       </p>
 
+      {/* Статус интеграции */}
+      <div className="rounded-lg border border-white/10 bg-slate-900/50 p-4">
+        {status?.status === "active" ? (
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+            <div className="flex-1">
+              <div className="font-medium text-white">Статус: Telegram подключён</div>
+              {status.phoneNumber && (
+                <div className="text-sm text-slate-400">{status.phoneNumber}</div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <XCircle className="h-5 w-5 text-slate-400" />
+            <div className="font-medium text-white">Статус: Telegram не привязан</div>
+          </div>
+        )}
+      </div>
+
       {/* Ошибки */}
       {error && (
         <div className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-900/20 p-3">

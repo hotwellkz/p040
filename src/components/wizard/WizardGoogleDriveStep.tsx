@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Loader2, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import {
   getGoogleDriveStatus,
@@ -17,22 +17,62 @@ export function WizardGoogleDriveStep({ onComplete, onSkip }: WizardGoogleDriveS
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const popupRef = useRef<Window | null>(null);
+  const checkIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
     loadStatus();
     
-    // Проверяем, вернулись ли мы после OAuth
-    const checkOAuthReturn = () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get("integration_refreshed") === "true") {
-        // Обновляем статус после возврата из OAuth
+    // Обработчик сообщений от popup-окна
+    const handleMessage = (event: MessageEvent) => {
+      // Проверяем origin для безопасности
+      const allowedOrigins = [
+        window.location.origin,
+        import.meta.env.VITE_API_URL?.replace(/\/api$/, "") || "http://localhost:8080"
+      ];
+      
+      if (!allowedOrigins.some(origin => event.origin.startsWith(origin))) {
+        return;
+      }
+
+      if (event.data?.type === "GOOGLE_DRIVE_CONNECTED") {
+        // Закрываем popup, если он ещё открыт
+        if (popupRef.current && !popupRef.current.closed) {
+          popupRef.current.close();
+        }
+        if (checkIntervalRef.current) {
+          clearInterval(checkIntervalRef.current);
+          checkIntervalRef.current = null;
+        }
+        
+        // Обновляем статус и переходим к следующему шагу
         setTimeout(() => {
           void loadStatus();
         }, 500);
+      } else if (event.data?.type === "GOOGLE_DRIVE_ERROR") {
+        setError(event.data.message || "Не удалось подключить Google Drive");
+        setConnecting(false);
+        if (popupRef.current && !popupRef.current.closed) {
+          popupRef.current.close();
+        }
+        if (checkIntervalRef.current) {
+          clearInterval(checkIntervalRef.current);
+          checkIntervalRef.current = null;
+        }
       }
     };
+
+    window.addEventListener("message", handleMessage);
     
-    checkOAuthReturn();
+    return () => {
+      window.removeEventListener("message", handleMessage);
+      if (checkIntervalRef.current) {
+        clearInterval(checkIntervalRef.current);
+      }
+      if (popupRef.current && !popupRef.current.closed) {
+        popupRef.current.close();
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -48,6 +88,7 @@ export function WizardGoogleDriveStep({ onComplete, onSkip }: WizardGoogleDriveS
   const loadStatus = async () => {
     try {
       setLoading(true);
+      setError(null);
       const currentStatus = await getGoogleDriveStatus();
       setStatus(currentStatus);
     } catch (err: any) {
@@ -67,8 +108,34 @@ export function WizardGoogleDriveStep({ onComplete, onSkip }: WizardGoogleDriveS
       // Сохраняем информацию о том, что мы в мастере
       sessionStorage.setItem("wizard_google_drive_step", "true");
       
-      // Перенаправляем пользователя на страницу авторизации Google
-      window.location.href = authUrl;
+      // Открываем popup для OAuth авторизации
+      const width = 600;
+      const height = 800;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2;
+      
+      popupRef.current = window.open(
+        authUrl,
+        "googleDriveAuth",
+        `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes,resizable=yes`
+      );
+
+      if (!popupRef.current) {
+        throw new Error("Не удалось открыть окно авторизации. Разрешите всплывающие окна в настройках браузера.");
+      }
+
+      // Проверяем, закрылось ли окно (пользователь может закрыть его вручную)
+      checkIntervalRef.current = window.setInterval(() => {
+        if (popupRef.current?.closed) {
+          if (checkIntervalRef.current) {
+            clearInterval(checkIntervalRef.current);
+            checkIntervalRef.current = null;
+          }
+          // Если окно закрыто, но мы не получили сообщение об успехе, считаем что пользователь отменил
+          setConnecting(false);
+        }
+      }, 500);
+      
     } catch (err: any) {
       let errorMsg = err.message || "Не удалось получить URL авторизации";
       
@@ -112,7 +179,7 @@ export function WizardGoogleDriveStep({ onComplete, onSkip }: WizardGoogleDriveS
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <h3 className="text-base font-semibold md:text-lg">Авторизация Google Drive</h3>
+        <h3 className="text-base font-semibold md:text-lg">Подключение Google Drive</h3>
         <FieldHelpIcon
           fieldKey="wizard.google_drive_connection"
           page="wizard"
@@ -120,12 +187,32 @@ export function WizardGoogleDriveStep({ onComplete, onSkip }: WizardGoogleDriveS
             step: "google_drive_connection",
             context: "wizard"
           }}
-          label="Авторизация Google Drive"
+          label="Подключение Google Drive"
         />
       </div>
       <p className="text-xs text-slate-400 md:text-sm">
-        Подключите свой Google Drive для автоматической загрузки и хранения видео. Это необходимо для работы автоматизации.
+        Подключите Google Drive, чтобы система могла автоматически сохранять и забирать ваши видео.
       </p>
+
+      {/* Статус интеграции */}
+      <div className="rounded-lg border border-white/10 bg-slate-900/50 p-4">
+        {status?.connected ? (
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+            <div className="flex-1">
+              <div className="font-medium text-white">Статус: подключен</div>
+              {status.email && (
+                <div className="text-sm text-slate-400">{status.email}</div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <XCircle className="h-5 w-5 text-slate-400" />
+            <div className="font-medium text-white">Статус: не подключен</div>
+          </div>
+        )}
+      </div>
 
       {/* Ошибки */}
       {error && (
@@ -161,15 +248,38 @@ export function WizardGoogleDriveStep({ onComplete, onSkip }: WizardGoogleDriveS
             )}
           </button>
           
+          {connecting && (
+            <p className="text-xs text-slate-400 text-center">
+              Откроется окно авторизации Google. После успешного подключения оно закроется автоматически.
+            </p>
+          )}
+          
           {onSkip && (
             <button
               type="button"
               onClick={onSkip}
-              className="w-full rounded-lg border border-white/20 bg-slate-800/50 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-700/50"
+              disabled={connecting}
+              className="w-full rounded-lg border border-white/20 bg-slate-800/50 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-700/50 disabled:opacity-50"
             >
               Пропустить (можно подключить позже)
             </button>
           )}
+        </div>
+      )}
+
+      {/* Если уже подключен, показываем кнопку управления */}
+      {currentStatus === "connected" && (
+        <div className="text-center">
+          <p className="text-xs text-slate-400">
+            Вы можете управлять интеграцией в{" "}
+            <a
+              href="/settings"
+              target="_blank"
+              className="text-brand hover:text-brand/80 underline"
+            >
+              настройках аккаунта
+            </a>
+          </p>
         </div>
       )}
     </div>

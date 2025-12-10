@@ -27,31 +27,61 @@ const GoogleDriveCallbackPage = () => {
       }
 
       try {
-        await confirmGoogleDriveCode(code);
+        const result = await confirmGoogleDriveCode(code);
         setStatus("success");
         
-        // Проверяем, откуда пришли (из настроек, из редактирования канала или из мастера)
-        const returnTo = sessionStorage.getItem("googleDriveReturnTo") || "/settings";
+        // Проверяем, открыто ли это окно в popup (из мастера)
+        const isPopup = window.opener && window.opener !== window;
         const isWizard = sessionStorage.getItem("wizard_google_drive_step") === "true";
+        const returnTo = sessionStorage.getItem("googleDriveReturnTo") || "/settings";
+        
         sessionStorage.removeItem("googleDriveReturnTo");
         sessionStorage.removeItem("wizard_google_drive_step");
         
-        // Перенаправляем на нужную страницу через 2 секунды
-        setTimeout(() => {
-          if (isWizard) {
-            // Возвращаемся в мастер создания канала
-            navigate("/channels/new?integration_refreshed=googleDrive", { replace: true });
-          } else if (returnTo.startsWith("/channels/") && returnTo.includes("/edit")) {
-            // Возвращаемся на страницу редактирования канала с параметром для обновления статуса
-            navigate(`${returnTo}?integration_refreshed=googleDrive`, { replace: true });
-          } else {
-            navigate(returnTo, { replace: true });
-          }
-        }, 2000);
+        if (isPopup && isWizard) {
+          // Отправляем сообщение родительскому окну (мастеру)
+          window.opener?.postMessage(
+            {
+              type: "GOOGLE_DRIVE_CONNECTED",
+              email: result.email
+            },
+            window.location.origin
+          );
+          
+          // Закрываем popup через 1 секунду
+          setTimeout(() => {
+            window.close();
+          }, 1000);
+        } else {
+          // Обычный редирект для страницы настроек или редактирования канала
+          setTimeout(() => {
+            if (returnTo.startsWith("/channels/") && returnTo.includes("/edit")) {
+              navigate(`${returnTo}?integration_refreshed=googleDrive`, { replace: true });
+            } else {
+              navigate(returnTo, { replace: true });
+            }
+          }, 2000);
+        }
       } catch (err: any) {
         setStatus("error");
         const errorMsg = err.message || "Не удалось подключить Google Drive";
         setError(errorMsg);
+        
+        // Если это popup, отправляем сообщение об ошибке
+        const isPopup = window.opener && window.opener !== window;
+        if (isPopup) {
+          window.opener?.postMessage(
+            {
+              type: "GOOGLE_DRIVE_ERROR",
+              message: errorMsg
+            },
+            window.location.origin
+          );
+          
+          setTimeout(() => {
+            window.close();
+          }, 2000);
+        }
       }
     };
 

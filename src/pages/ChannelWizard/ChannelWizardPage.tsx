@@ -121,10 +121,9 @@ const ChannelWizardPage = () => {
   const integrationsStatus = useIntegrationsStatus();
   
   // Вычисляем реальные шаги с учетом пропуска интеграций
-  const getEffectiveSteps = () => {
+  const getEffectiveSteps = useCallback(() => {
     const baseSteps = STEPS;
     const effectiveSteps: Array<{ id: number; title: string; type: string }> = [];
-    let stepId = 1;
     
     // Добавляем базовые шаги
     baseSteps.forEach(step => {
@@ -145,7 +144,7 @@ const ChannelWizardPage = () => {
     effectiveSteps.push({ id: effectiveSteps.length + 1, title: "Создание папок для канала", type: "drive_folders" });
     
     return effectiveSteps;
-  };
+  }, [integrationsStatus.status.telegram.connected, integrationsStatus.status.googleDrive.connected]);
   
   const effectiveSteps = getEffectiveSteps();
   const totalSteps = effectiveSteps.length;
@@ -282,14 +281,43 @@ const ChannelWizardPage = () => {
   
   const handleGoogleDriveComplete = useCallback(() => {
     integrationsStatus.refreshStatus();
-    setCurrentStep(prev => {
-      if (prev < totalSteps) {
-        return prev + 1;
-      }
-      return prev;
+    // После подключения Google Drive всегда переходим на шаг создания папок
+    // Пересчитываем шаги с учётом того, что Google Drive теперь подключен
+    const baseSteps = STEPS;
+    const updatedSteps: Array<{ id: number; title: string; type: string }> = [];
+    
+    // Добавляем базовые шаги
+    baseSteps.forEach(step => {
+      updatedSteps.push({ ...step, type: "form" });
     });
+    
+    // Добавляем шаг Telegram (если не подключен)
+    if (!integrationsStatus.status.telegram.connected) {
+      updatedSteps.push({ id: updatedSteps.length + 1, title: "Подключение Telegram", type: "telegram" });
+    }
+    
+    // Google Drive теперь подключен, поэтому шаг не добавляем
+    
+    // Всегда добавляем шаг создания папок (обязательный)
+    updatedSteps.push({ id: updatedSteps.length + 1, title: "Создание папок для канала", type: "drive_folders" });
+    
+    // Находим индекс шага создания папок
+    const driveFoldersStepIndex = updatedSteps.findIndex(step => step.type === "drive_folders");
+    
+    if (driveFoldersStepIndex !== -1) {
+      // Переходим на шаг создания папок (индекс + 1, так как currentStep начинается с 1)
+      setCurrentStep(driveFoldersStepIndex + 1);
+    } else {
+      // Если шаг не найден (не должно быть), просто переходим на следующий
+      setCurrentStep(prev => {
+        if (prev < updatedSteps.length) {
+          return prev + 1;
+        }
+        return prev;
+      });
+    }
     setError(null);
-  }, [totalSteps, integrationsStatus]);
+  }, [integrationsStatus.status.telegram.connected]);
   
   const handleDriveFoldersComplete = async (rootFolderId: string, archiveFolderId: string) => {
     // Сохраняем folderId во временное состояние мастера
