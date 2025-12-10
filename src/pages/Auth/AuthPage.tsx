@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Loader2, Sparkles, Wand2, CheckCircle2, Shield, Zap, Rocket } from "lucide-react";
+import { Loader2, Sparkles, Wand2, CheckCircle2, Shield, Zap, Rocket, Home } from "lucide-react";
 import clsx from "clsx";
 import { useAuthStore } from "../../stores/authStore";
 import { useNavigate, useLocation, Link } from "react-router-dom";
@@ -133,6 +133,20 @@ const AuthPage = () => {
         </div>
 
         <div className="relative z-10 mx-auto min-h-screen px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+          {/* Кликабельный логотип/название вверху */}
+          <div className="mb-8 sm:mb-12 flex items-center justify-center sm:justify-start">
+            <Link
+              to="/"
+              className="group inline-flex items-center gap-2.5 rounded-xl glass border border-white/10 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:border-purple-500/50 hover:bg-white/5 hover:scale-105 hover:shadow-lg hover:shadow-purple-500/20 sm:px-5 sm:py-3 sm:text-base"
+              aria-label="Перейти на главную страницу"
+            >
+              <Sparkles size={20} className="text-purple-400 transition-transform group-hover:scale-110 group-hover:text-purple-300" />
+              <span className="bg-gradient-to-r from-white to-slate-200 bg-clip-text text-transparent group-hover:from-purple-300 group-hover:to-pink-300 transition-all">
+                ShortsAI Studio
+              </span>
+            </Link>
+          </div>
+
           <div className="mx-auto grid w-full max-w-7xl gap-12 lg:grid-cols-2 lg:gap-16 items-center">
             {/* Левая часть - текстовый блок */}
             <section 
@@ -284,15 +298,23 @@ const AuthPage = () => {
                   </button>
                 </form>
 
-                {/* Переключение режима */}
-                <div className="mt-6 text-center">
+                {/* Переключение режима и ссылка на главную */}
+                <div className="mt-6 space-y-3 text-center">
                   <button
                     type="button"
                     onClick={toggleMode}
-                    className="text-sm font-medium text-purple-400 underline-offset-4 transition hover:text-purple-300"
+                    className="block w-full text-sm font-medium text-purple-400 underline-offset-4 transition hover:text-purple-300"
                   >
                     {secondaryActionLabel}
                   </button>
+                  <div className="text-xs text-slate-500">или</div>
+                  <Link
+                    to="/"
+                    className="inline-flex items-center gap-2 text-sm font-medium text-slate-400 underline-offset-4 transition hover:text-purple-400"
+                  >
+                    <Home size={16} />
+                    <span>На главную</span>
+                  </Link>
                 </div>
 
                 {/* Кнопка выхода */}
