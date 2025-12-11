@@ -5,6 +5,7 @@ import { blottataPublisherService } from "./blottataPublisherService";
 import { generateYoutubeTitleAndDescription } from "./youtubeTitleDescriptionGenerator";
 import { getDriveClient } from "./googleDrive";
 import { normalizeYoutubeTitle } from "../utils/youtubeTitleNormalizer";
+import { logError } from "./errorLogger";
 
 interface ProcessedFile {
   fileId: string;
@@ -29,11 +30,138 @@ function cleanFolderId(folderId: string): string {
 }
 
 /**
+ * Предварительная проверка файла перед отправкой в Blottata
+ * Проверяет существование файла, его размер и тип
+ */
+async function validateFileBeforeBlottata(params: {
+  fileMeta: any;
+  fileId: string;
+  channelId: string;
+  channelName: string;
+  userId: string;
+}): Promise<{ valid: boolean; reason?: string }> {
+  const { fileMeta, fileId, channelId, channelName, userId } = params;
+
+  // Проверка 1: Файл не найден
+  if (!fileMeta || !fileMeta.id) {
+    const reason = "Файл не найден в Google Drive";
+    Logger.warn("[BlottataPrecheck] Invalid media for channel", {
+      channelId,
+      fileId,
+      reason,
+      meta: fileMeta
+    });
+
+        await logError({
+          userId,
+          channelId,
+          channelName,
+          source: "blotato_publish",
+          severity: "warning",
+          code: "INVALID_MEDIA_BEFORE_BLOTTATA",
+          message: "Файл на Google Drive не подходит для публикации (не найден). Проверьте ссылку и заново сгенерируйте видео.",
+          details: {
+            fileId,
+            fileName: fileMeta?.name || "unknown",
+            reason: "file_not_found",
+            driveWebViewLink: fileMeta?.webViewLink,
+            platforms: [] // Платформы будут определены позже, если файл пройдёт проверку
+          }
+        });
+
+    return { valid: false, reason };
+  }
+
+  // Проверка 2: Пустой файл
+  const fileSize = fileMeta.size ? Number(fileMeta.size) : 0;
+  if (!fileSize || fileSize === 0) {
+    const reason = "Файл пустой (размер 0 байт)";
+    Logger.warn("[BlottataPrecheck] Invalid media for channel", {
+      channelId,
+      fileId,
+      reason,
+      size: fileSize,
+      meta: fileMeta
+    });
+
+        await logError({
+          userId,
+          channelId,
+          channelName,
+          source: "blotato_publish",
+          severity: "warning",
+          code: "INVALID_MEDIA_BEFORE_BLOTTATA",
+          message: "Файл на Google Drive не подходит для публикации (пустой файл). Проверьте ссылку и заново сгенерируйте видео.",
+          details: {
+            fileId,
+            fileName: fileMeta.name || "unknown",
+            mimeType: fileMeta.mimeType,
+            size: fileSize,
+            reason: "empty_file",
+            driveWebViewLink: fileMeta.webViewLink,
+            platforms: [] // Платформы будут определены позже, если файл пройдёт проверку
+          }
+        });
+
+    return { valid: false, reason };
+  }
+
+  // Проверка 3: Это не видео
+  const mimeType = fileMeta.mimeType || "";
+  if (!mimeType.startsWith("video/")) {
+    const reason = `Файл не является видео: ${mimeType}`;
+    Logger.warn("[BlottataPrecheck] Invalid media for channel", {
+      channelId,
+      fileId,
+      reason,
+      mimeType,
+      meta: fileMeta
+    });
+
+        await logError({
+          userId,
+          channelId,
+          channelName,
+          source: "blotato_publish",
+          severity: "warning",
+          code: "INVALID_MEDIA_BEFORE_BLOTTATA",
+          message: "Файл на Google Drive не подходит для публикации (не видео). Проверьте ссылку и заново сгенерируйте видео.",
+          details: {
+            fileId,
+            fileName: fileMeta.name || "unknown",
+            mimeType,
+            size: fileSize,
+            reason: "not_video",
+            driveWebViewLink: fileMeta.webViewLink,
+            platforms: [] // Платформы будут определены позже, если файл пройдёт проверку
+          }
+        });
+
+    return { valid: false, reason };
+  }
+
+  // Все проверки пройдены
+  Logger.info("[BlottataPrecheck] File validation passed", {
+    channelId,
+    fileId,
+    fileName: fileMeta.name,
+    mimeType,
+    size: fileSize
+  });
+
+  return { valid: true };
+}
+
+/**
  * Обрабатывает файл из Google Drive: генерирует описание, публикует через Blottata, перемещает в архив
+ * @param channel - Канал для публикации
+ * @param fileId - ID файла в Google Drive
+ * @param userId - ID владельца канала (для журнала ошибок)
  */
 export async function processBlottataFile(
   channel: Channel,
-  fileId: string
+  fileId: string,
+  userId?: string
 ): Promise<ProcessedFile> {
   const result: ProcessedFile = {
     fileId,
@@ -52,19 +180,36 @@ export async function processBlottataFile(
       blotataEnabled: channel.blotataEnabled || false
     });
 
-    // 1. Получаем информацию о файле из Google Drive
+    // 1. Получаем информацию о файле из Google Drive с расширенными полями для предварительной проверки
     const drive = getDriveClient(true);
     const fileInfo = await drive.files.get({
       fileId,
-      fields: "id, name, webContentLink, mimeType, parents"
+      fields: "id, name, webContentLink, webViewLink, mimeType, size, createdTime, modifiedTime, parents"
     });
 
     result.fileName = fileInfo.data.name || "unknown";
+    const fileMeta = fileInfo.data;
 
-    // Проверяем, что это видео
-    const mimeType = fileInfo.data.mimeType || "";
-    if (!mimeType.startsWith("video/")) {
-      throw new Error(`File is not a video: ${mimeType}`);
+    // Предварительная проверка файла перед отправкой в Blottata
+    const precheckResult = await validateFileBeforeBlottata({
+      fileMeta,
+      fileId,
+      channelId: channel.id,
+      channelName: channel.name,
+      userId: userId || "unknown"
+    });
+
+    if (!precheckResult.valid) {
+      // Файл не прошёл проверку - не вызываем Blottata
+      const errorMessage = precheckResult.reason || "Файл не прошёл предварительную проверку";
+      result.errors.push(errorMessage);
+      Logger.warn("BlottataFileProcessor: File precheck failed, skipping Blottata", {
+        channelId: channel.id,
+        fileId,
+        fileName: result.fileName,
+        reason: precheckResult.reason
+      });
+      return result;
     }
 
     // 2. Получаем публичную ссылку на файл
@@ -96,12 +241,75 @@ export async function processBlottataFile(
     });
 
     // 4. Публикуем на все настроенные платформы
-    const publishResults = await blottataPublisherService.publishToAllPlatforms({
-      channel,
-      mediaUrl,
-      description,
-      title: normalizedTitle
-    });
+    // Получаем список платформ для логирования ошибок
+    const platforms: string[] = [];
+    if (channel.blotataYoutubeId) platforms.push("youtube");
+    if (channel.blotataTiktokId) platforms.push("tiktok");
+    if (channel.blotataInstagramId) platforms.push("instagram");
+    if (channel.blotataFacebookId) platforms.push("facebook");
+    if (channel.blotataThreadsId) platforms.push("threads");
+    if (channel.blotataTwitterId) platforms.push("twitter");
+    if (channel.blotataLinkedinId) platforms.push("linkedin");
+    if (channel.blotataPinterestId) platforms.push("pinterest");
+    if (channel.blotataBlueskyId) platforms.push("bluesky");
+
+    let publishResults;
+    try {
+      publishResults = await blottataPublisherService.publishToAllPlatforms({
+        channel,
+        mediaUrl,
+        description,
+        title: normalizedTitle
+      });
+    } catch (blottataError: any) {
+      // Специальная обработка ошибки BLOTTATA_MEDIA_UPLOAD_FAILED
+      const errorMessage = blottataError?.message || String(blottataError);
+      const isMediaUploadError = 
+        errorMessage.includes("BLOTTATA_MEDIA_UPLOAD_FAILED") ||
+        errorMessage.includes("BLOTATA_MEDIA_UPLOAD_FAILED") ||
+        errorMessage.includes("Failed to read media metadata") ||
+        errorMessage.includes("Is the file accessible and a valid media file") ||
+        blottataError?.response?.status === 500;
+
+      if (isMediaUploadError && userId && userId !== "unknown") {
+        Logger.error("[BlottataPublish] BLOTTATA_MEDIA_UPLOAD_FAILED for channel", {
+          channelId: channel.id,
+          fileId,
+          fileName: result.fileName,
+          error: errorMessage,
+          status: blottataError?.response?.status,
+          data: blottataError?.response?.data,
+          platforms
+        });
+
+        await logError({
+          userId,
+          channelId: channel.id,
+          channelName: channel.name,
+          source: "blotato_publish",
+          severity: "error",
+          code: "BLOTTATA_MEDIA_UPLOAD_FAILED",
+          message: "Blottata не смогла прочитать метаданные видео. Чаще всего это означает, что файл повреждён, пустой или временно недоступен. Попробуйте пересоздать видео и заново запустить автопубликацию.",
+          details: {
+            fileId,
+            fileName: result.fileName,
+            mimeType: fileMeta?.mimeType,
+            size: fileMeta?.size,
+            driveWebViewLink: fileMeta?.webViewLink,
+            platforms,
+            blottataRequestId: blottataError?.response?.data?.requestId || blottataError?.response?.data?.id,
+            originalError: {
+              message: errorMessage.substring(0, 500), // Ограничиваем длину
+              status: blottataError?.response?.status,
+              data: blottataError?.response?.data
+            }
+          }
+        });
+      }
+
+      // Пробрасываем ошибку дальше
+      throw blottataError;
+    }
 
     // Анализируем результаты
     const successfulPlatforms: string[] = [];
@@ -201,14 +409,51 @@ export async function processBlottataFile(
 
     return result;
   } catch (error: any) {
+    const errorMessage = error?.message || String(error);
+    
     Logger.error("BlottataFileProcessor: File processing failed", {
       channelId: channel.id,
       fileId,
-      error: error?.message || String(error)
+      error: errorMessage,
+      userId: userId || "unknown"
     });
 
+    // Если это не ошибка предварительной проверки (она уже залогирована),
+    // и у нас есть userId, логируем в журнал ошибок
+    if (
+      userId &&
+      userId !== "unknown" &&
+      !errorMessage.includes("INVALID_MEDIA_BEFORE_BLOTTATA")
+    ) {
+      // Проверяем, не является ли это ошибкой BLOTTATA_MEDIA_UPLOAD_FAILED
+      // (она уже обработана выше, но на всякий случай проверяем здесь тоже)
+      const isMediaUploadError = 
+        errorMessage.includes("BLOTTATA_MEDIA_UPLOAD_FAILED") ||
+        errorMessage.includes("BLOTATA_MEDIA_UPLOAD_FAILED") ||
+        errorMessage.includes("Failed to read media metadata");
+
+      if (!isMediaUploadError) {
+        // Логируем другие ошибки обработки файла
+        await logError({
+          userId,
+          channelId: channel.id,
+          channelName: channel.name,
+          source: "blotato_publish",
+          severity: "error",
+          code: "BLOTTATA_FILE_PROCESSING_FAILED",
+          message: `Ошибка при обработке файла для публикации через Blottata: ${errorMessage.substring(0, 200)}`,
+          details: {
+            fileId,
+            fileName: result.fileName || "unknown",
+            error: errorMessage.substring(0, 1000),
+            errorStack: error?.stack?.substring(0, 2000)
+          }
+        });
+      }
+    }
+
     result.success = false;
-    result.errors.push(error?.message || String(error));
+    result.errors.push(errorMessage);
     return result;
   }
 }

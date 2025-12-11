@@ -281,8 +281,8 @@ export async function processNewFilesForChannel(channel: Channel): Promise<{
       }
 
       try {
-        // Обрабатываем файл
-        const processResult = await processBlottataFile(channel, file.id);
+        // Обрабатываем файл (передаём ownerId для журнала ошибок)
+        const processResult = await processBlottataFile(channel, file.id, channel.ownerId);
 
         if (processResult.success) {
           // Помечаем файл как обработанный

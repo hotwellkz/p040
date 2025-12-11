@@ -66,6 +66,7 @@ const ChannelListPage = () => {
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [localChannels, setLocalChannels] = useState<Channel[]>([]);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [channelStates, setChannelStates] = useState<Map<string, ChannelStateInfo>>(new Map());
   const [minIntervalMinutes, setMinIntervalMinutes] = useState(11);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
@@ -473,38 +474,38 @@ const ChannelListPage = () => {
         )}
 
         {/* Десктопная версия заголовка */}
-        <header className="hidden flex-col gap-3 rounded-2xl channels-premium-header p-4 md:flex lg:p-5">
-          {/* Основной контейнер: заголовок слева, кнопки справа */}
-          <div className="flex items-start justify-between gap-4 lg:gap-6">
-            {/* Левая часть: заголовок и описание (ограничиваем ширину) */}
-            <div className="flex-1 min-w-0 max-w-[45%]">
-              <div className="flex items-baseline gap-2 flex-wrap mb-1">
-                <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 font-medium">
+        <header className="hidden flex-col gap-3 rounded-2xl channels-premium-header p-4 md:flex lg:p-5 overflow-hidden">
+          {/* Основной контейнер: flex-layout с wrap для предотвращения выхода за границы */}
+          <div className="flex flex-wrap items-start gap-4 lg:gap-6 w-full max-w-full box-border">
+            {/* Левая часть: заголовок и описание */}
+            <div className="flex-1 min-w-0 basis-full lg:basis-auto lg:min-w-[280px] lg:max-w-[50%] xl:max-w-[55%] 2xl:max-w-[60%] box-border">
+              <div className="flex items-baseline gap-2 flex-wrap mb-1.5">
+                <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 font-medium whitespace-nowrap">
                   Панель канала
                 </p>
                 {user && (
-                  <p className="text-[10px] text-slate-500 truncate">
+                  <p className="text-[10px] text-slate-500 truncate min-w-0 flex-shrink">
                     Вы вошли как <span className="text-slate-400 font-medium">{user.email}</span>
                   </p>
                 )}
               </div>
-              <h1 className="text-xl lg:text-2xl font-bold premium-title mb-1">
+              <h1 className="text-xl lg:text-2xl font-bold premium-title mb-1.5 break-words">
                 Ваши каналы ({channels.length})
               </h1>
-              <p className="text-xs text-slate-400 premium-subtitle leading-snug line-clamp-2">
+              <p className="text-xs text-slate-400 premium-subtitle leading-snug">
                 Управляйте настройками, запускайте генерации сценариев и создавайте
                 новые каналы под разные соцсети.
               </p>
             </div>
 
             {/* Правая часть: кнопки, переключатели, аватар */}
-            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
-              {/* Группа основных кнопок */}
+            <div className="flex items-center gap-2 flex-wrap flex-shrink-0 justify-end w-full lg:w-auto lg:flex-shrink box-border">
+              {/* Основные кнопки: Создать, Расписание, Генератор */}
               <div className="flex items-center gap-1.5 flex-wrap">
                 <button
                   type="button"
                   onClick={goToWizard}
-                  className="premium-btn-primary inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-white lg:px-3.5 lg:py-2 lg:text-sm"
+                  className="premium-btn-primary inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-white lg:px-3.5 lg:py-2 lg:text-sm flex-shrink-0"
                 >
                   <Plus size={14} className="lg:w-4 lg:h-4" />
                   <span className="hidden lg:inline">Создать</span>
@@ -512,7 +513,7 @@ const ChannelListPage = () => {
                 <button
                   type="button"
                   onClick={() => navigate("/channels/schedule")}
-                  className="premium-btn-secondary inline-flex items-center justify-center gap-1.5 rounded-xl px-2.5 py-2 text-xs text-slate-200 lg:px-3 lg:py-2 lg:text-sm"
+                  className="premium-btn-secondary inline-flex items-center justify-center gap-1.5 rounded-xl px-2.5 py-2 text-xs text-slate-200 lg:px-3 lg:py-2 lg:text-sm flex-shrink-0"
                   title="Расписание"
                 >
                   <Calendar size={14} className="lg:w-4 lg:h-4" />
@@ -521,17 +522,19 @@ const ChannelListPage = () => {
                 <button
                   type="button"
                   onClick={() => navigate("/scripts")}
-                  className="premium-btn-secondary inline-flex items-center justify-center gap-1.5 rounded-xl px-2.5 py-2 text-xs text-slate-200 lg:px-3 lg:py-2 lg:text-sm"
+                  className="premium-btn-secondary inline-flex items-center justify-center gap-1.5 rounded-xl px-2.5 py-2 text-xs text-slate-200 lg:px-3 lg:py-2 lg:text-sm flex-shrink-0"
                   title="Генератор"
                 >
                   <Wand2 size={14} className="lg:w-4 lg:h-4" />
                   <span className="hidden xl:inline">Генератор</span>
                 </button>
+                
+                {/* Экспорт и Импорт: показываем на широких экранах (≥1536px), скрываем на средних */}
                 <button
                   type="button"
                   onClick={handleExport}
                   disabled={isExporting || channels.length === 0}
-                  className="premium-btn-secondary inline-flex items-center justify-center gap-1.5 rounded-xl px-2.5 py-2 text-xs text-slate-200 lg:px-3 lg:py-2 lg:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="premium-btn-secondary hidden 2xl:inline-flex items-center justify-center gap-1.5 rounded-xl px-2.5 py-2 text-xs text-slate-200 lg:px-3 lg:py-2 lg:text-sm disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                   title="Экспорт каналов"
                 >
                   {isExporting ? (
@@ -544,15 +547,74 @@ const ChannelListPage = () => {
                 <button
                   type="button"
                   onClick={handleImportClick}
-                  className="premium-btn-secondary inline-flex items-center justify-center gap-1.5 rounded-xl px-2.5 py-2 text-xs text-slate-200 lg:px-3 lg:py-2 lg:text-sm"
+                  className="premium-btn-secondary hidden 2xl:inline-flex items-center justify-center gap-1.5 rounded-xl px-2.5 py-2 text-xs text-slate-200 lg:px-3 lg:py-2 lg:text-sm flex-shrink-0"
                   title="Импорт каналов"
                 >
                   <Upload size={14} className="lg:w-4 lg:h-4" />
                   <span className="hidden xl:inline">Импорт</span>
                 </button>
               </div>
+
+              {/* Меню "Ещё" для средних экранов (1024-1536px) */}
+              <div className="relative 2xl:hidden flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMoreMenu(!showMoreMenu);
+                  }}
+                  className="premium-btn-secondary inline-flex items-center justify-center gap-1.5 rounded-xl px-2.5 py-2 text-xs text-slate-200 lg:px-3 lg:py-2 lg:text-sm"
+                  title="Дополнительные действия"
+                >
+                  <MoreVertical size={14} className="lg:w-4 lg:h-4" />
+                  <span className="hidden xl:inline">Ещё</span>
+                </button>
+                {showMoreMenu && createPortal(
+                  <>
+                    <div
+                      className="fixed inset-0 bg-transparent"
+                      style={{ zIndex: 99998 }}
+                      onClick={() => setShowMoreMenu(false)}
+                    />
+                    <div 
+                      className="fixed right-4 xl:right-6 top-20 xl:top-24 w-48 rounded-lg channels-premium-header p-2 shadow-2xl z-[99999] border border-white/10"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleExport();
+                          setShowMoreMenu(false);
+                        }}
+                        disabled={isExporting || channels.length === 0}
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-200 transition hover:bg-slate-800/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isExporting ? (
+                          <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                          <Download size={16} />
+                        )}
+                        Экспорт каналов
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleImportClick();
+                          setShowMoreMenu(false);
+                        }}
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-200 transition hover:bg-slate-800/50"
+                      >
+                        <Upload size={16} />
+                        Импорт каналов
+                      </button>
+                    </div>
+                  </>,
+                  document.body
+                )}
+              </div>
+
               {/* Переключатель раскладки Grid/List/Compact */}
-              <div className="hidden md:flex items-center gap-0.5 rounded-xl premium-btn-secondary p-0.5">
+              <div className="flex items-center gap-0.5 rounded-xl premium-btn-secondary p-0.5 flex-shrink-0">
                 <button
                   type="button"
                   onClick={() => setLayoutMode("grid")}
@@ -590,11 +652,12 @@ const ChannelListPage = () => {
                   <AlignJustify size={14} className="lg:w-4 lg:h-4" />
                 </button>
               </div>
+              
               {/* Кнопка ошибок с бейджем */}
               <button
                 type="button"
                 onClick={() => navigate("/errors")}
-                className="relative rounded-xl border border-white/10 bg-slate-800/60 p-2 text-slate-300 transition hover:border-white/20 hover:bg-slate-800/80 hover:text-white"
+                className="relative rounded-xl border border-white/10 bg-slate-800/60 p-2 text-slate-300 transition hover:border-white/20 hover:bg-slate-800/80 hover:text-white flex-shrink-0"
                 title="Журнал ошибок"
               >
                 <AlertCircle size={18} className="lg:w-5 lg:h-5" />
@@ -604,8 +667,12 @@ const ChannelListPage = () => {
                   </span>
                 )}
               </button>
-              <NotificationBell />
-              <UserMenu />
+              <div className="flex-shrink-0">
+                <NotificationBell />
+              </div>
+              <div className="flex-shrink-0">
+                <UserMenu />
+              </div>
             </div>
           </div>
 

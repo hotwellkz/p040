@@ -107,13 +107,34 @@ export class BlottataPublisherService {
 
       return response.data.url;
     } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || "Unknown error";
+      const statusCode = error?.response?.status;
+      const responseData = error?.response?.data;
+
       Logger.error("BlottataPublisherService: Failed to upload media", {
-        error: error?.message || String(error),
-        status: error?.response?.status,
-        data: error?.response?.data
+        error: errorMessage,
+        status: statusCode,
+        data: responseData,
+        mediaUrl: mediaUrl.substring(0, 100) // Логируем только начало URL для безопасности
       });
+
+      // Детальное логирование для диагностики
+      const isMediaMetadataError = 
+        errorMessage.includes("Failed to read media metadata") ||
+        errorMessage.includes("Is the file accessible and a valid media file") ||
+        statusCode === 500;
+
+      if (isMediaMetadataError) {
+        Logger.warn("BlottataPublisherService: Media metadata read error detected", {
+          error: errorMessage,
+          status: statusCode,
+          responseData,
+          mediaUrl: mediaUrl.substring(0, 100)
+        });
+      }
+
       throw new Error(
-        `BLOTATA_MEDIA_UPLOAD_FAILED: ${error?.response?.data?.message || error?.message || "Unknown error"}`
+        `BLOTATA_MEDIA_UPLOAD_FAILED: ${errorMessage}`
       );
     }
   }

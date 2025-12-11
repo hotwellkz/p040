@@ -1155,7 +1155,7 @@ router.post("/:id/test-blottata", authRequired, async (req, res) => {
         userId
       });
 
-      result = await processBlottataFile(channel, fileId);
+      result = await processBlottataFile(channel, fileId, userId);
     } else {
       // Тестируем первый файл из входной папки
       Logger.info("test-blottata: Testing first file from input folder", {
@@ -1174,7 +1174,7 @@ router.post("/:id/test-blottata", authRequired, async (req, res) => {
       }
 
       const testFile = files[0];
-      result = await processBlottataFile(channel, testFile.id);
+      result = await processBlottataFile(channel, testFile.id, userId);
     }
 
     Logger.info("test-blottata: Test completed", {
