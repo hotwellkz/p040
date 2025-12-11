@@ -40,6 +40,7 @@ import notificationRoutes from "./routes/notificationRoutes";
 import adminRoutes from "./routes/adminRoutes";
 import helpRoutes from "./routes/helpRoutes";
 import userSettingsRoutes from "./routes/userSettingsRoutes";
+import errorLogsRoutes from "./routes/errorLogsRoutes";
 import { processAutoSendTick } from "./services/autoSendScheduler";
 import { Logger } from "./utils/logger";
 import { getFirestoreInfo, isFirestoreAvailable } from "./services/firebaseAdmin";
@@ -102,6 +103,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/help", helpRoutes);
 app.use("/api/user-settings", userSettingsRoutes);
+app.use("/api/error-logs", errorLogsRoutes);
 
 // Логируем подключенные маршруты для диагностики
 Logger.info("Backend routes registered", {

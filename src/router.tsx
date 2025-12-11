@@ -18,6 +18,7 @@ import AccountSettingsPage from "./pages/AccountSettings/AccountSettingsPage";
 import NotificationsPage from "./pages/Notifications/NotificationsPage";
 import GoogleDriveCallbackPage from "./pages/GoogleDriveCallback/GoogleDriveCallbackPage";
 import BlotatoSetupPage from "./pages/BlotatoSetup/BlotatoSetupPage";
+import ErrorLogsPage from "./pages/ErrorLogs/ErrorLogsPage";
 import { useAuthStore } from "./stores/authStore";
 
 const FullscreenLoader = () => (
@@ -152,6 +153,14 @@ const AppRouter = () => {
       element={
         <PrivateRoute>
           <NotificationsPage />
+        </PrivateRoute>
+      }
+    />
+    <Route
+      path="/errors"
+      element={
+        <PrivateRoute>
+          <ErrorLogsPage />
         </PrivateRoute>
       }
     />

@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Loader2, Plus, Video, Wand2, Calendar, MoreVertical, Bell, Grid3x3, List, User, LogOut, Search, X, AlignJustify, Play, Edit2, Download, Upload } from "lucide-react";
+import { Loader2, Plus, Video, Wand2, Calendar, MoreVertical, Bell, Grid3x3, List, User, LogOut, Search, X, AlignJustify, Play, Edit2, Download, Upload, AlertCircle } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   DndContext,
@@ -31,6 +31,7 @@ import { calculateChannelStates, type ChannelStateInfo } from "../../utils/chann
 import { fetchScheduleSettings } from "../../api/scheduleSettings";
 import { getAuthToken } from "../../utils/auth";
 import { getUserSettings, updateUserSettings } from "../../api/userSettings";
+import { getUnresolvedErrorCount } from "../../api/errorLogs";
 
 const backendBaseUrl =
   (import.meta.env.VITE_BACKEND_URL as string | undefined) ||
@@ -71,6 +72,7 @@ const ChannelListPage = () => {
   const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [unresolvedErrorCount, setUnresolvedErrorCount] = useState(0);
   
   // Состояние для режима отображения (grid/list/compact)
   type ChannelsViewMode = "grid" | "list" | "compact";
@@ -83,6 +85,40 @@ const ChannelListPage = () => {
   useEffect(() => {
     localStorage.setItem("channels-layout-mode", layoutMode);
   }, [layoutMode]);
+
+  // Загружаем количество нерешённых ошибок
+  useEffect(() => {
+    const loadErrorCount = async () => {
+      if (!user?.uid) return;
+      try {
+        const count = await getUnresolvedErrorCount();
+        setUnresolvedErrorCount(count);
+      } catch (error) {
+        console.error("Failed to load error count", error);
+      }
+    };
+
+    loadErrorCount();
+    // Обновляем каждые 30 секунд
+    const interval = setInterval(loadErrorCount, 30000);
+    return () => clearInterval(interval);
+  }, [user?.uid]);
+
+  // Обновляем при фокусе страницы
+  useEffect(() => {
+    const handleFocus = async () => {
+      if (!user?.uid) return;
+      try {
+        const count = await getUnresolvedErrorCount();
+        setUnresolvedErrorCount(count);
+      } catch (error) {
+        console.error("Failed to load error count on focus", error);
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [user?.uid]);
 
   // Синхронизируем локальное состояние с глобальным
   useEffect(() => {
@@ -554,6 +590,20 @@ const ChannelListPage = () => {
                   <AlignJustify size={14} className="lg:w-4 lg:h-4" />
                 </button>
               </div>
+              {/* Кнопка ошибок с бейджем */}
+              <button
+                type="button"
+                onClick={() => navigate("/errors")}
+                className="relative rounded-xl border border-white/10 bg-slate-800/60 p-2 text-slate-300 transition hover:border-white/20 hover:bg-slate-800/80 hover:text-white"
+                title="Журнал ошибок"
+              >
+                <AlertCircle size={18} className="lg:w-5 lg:h-5" />
+                {unresolvedErrorCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+                    {unresolvedErrorCount > 9 ? "9+" : unresolvedErrorCount}
+                  </span>
+                )}
+              </button>
               <NotificationBell />
               <UserMenu />
             </div>

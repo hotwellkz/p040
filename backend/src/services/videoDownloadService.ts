@@ -13,6 +13,7 @@ import { google } from "googleapis";
 import { generateVideoFileName } from "../utils/fileUtils";
 import { sendVideoUploadNotification } from "./notificationService";
 import { notificationRepository } from "../repositories/notificationRepo";
+import { logError } from "./errorLogger";
 import type { TelegramClient } from "telegram";
 
 const SYNX_CHAT_ID = process.env.SYNX_CHAT_ID;
@@ -474,6 +475,27 @@ export async function downloadAndUploadVideoToDrive(
             error: "TELEGRAM_SESSION_INVALID: Сессия Telegram недействительна (AUTH_KEY_UNREGISTERED). Отвяжите и заново привяжите Telegram в настройках аккаунта."
           };
         }
+
+        // Логируем ошибку в централизованный журнал ошибок
+        await logError({
+          userId,
+          channelId,
+          channelName: channelData.name,
+          source: "telegram_download",
+          code: "TELEGRAM_VIDEO_DOWNLOAD_FAILED",
+          message: "Не удалось скачать видео из Telegram для данного канала.",
+          details: {
+            error: downloadError,
+            telegramMessageId,
+            transport,
+            scheduleId,
+            errorMessage,
+            errorCode,
+            errorClassName,
+            errorErrorCode,
+            errorErrorMessage,
+          },
+        });
 
         // Создаём уведомление об ошибке скачивания (только для других ошибок, не связанных с сессией)
         try {
@@ -1060,6 +1082,46 @@ export async function downloadAndUploadVideoToDrive(
         const errorType = uploadError?.errorType;
         const folderId = uploadError?.folderId || finalFolderId;
         const userEmail = uploadError?.userEmail;
+        
+        // Определяем тип ошибки для логирования
+        let errorSource: "google_drive_upload" | "google_drive_auth" = "google_drive_upload";
+        let errorCode = "GOOGLE_DRIVE_UPLOAD_FAILED";
+        
+        if (
+          errorMessage.includes("GOOGLE_DRIVE_AUTH_FAILED") ||
+          errorMessage.includes("OAuth токен") ||
+          errorMessage.includes("Refresh token") ||
+          uploadError?.code === 401
+        ) {
+          errorSource = "google_drive_auth";
+          errorCode = "GOOGLE_DRIVE_AUTH_FAILED";
+        } else if (
+          errorMessage.includes("GOOGLE_DRIVE_PERMISSION_DENIED") ||
+          errorMessage.includes("GOOGLE_DRIVE_FOLDER_NOT_FOUND") ||
+          errorType === "FOLDER_ACCESS" ||
+          errorType === "FOLDER_NOT_FOUND"
+        ) {
+          errorCode = "GOOGLE_DRIVE_PERMISSION_DENIED";
+        }
+        
+        // Логируем ошибку в централизованный журнал
+        await logError({
+          userId,
+          channelId,
+          channelName: channelData.name,
+          source: errorSource,
+          code: errorCode,
+          message: "Видео не удалось загрузить на Google Drive.",
+          details: {
+            error: uploadError,
+            folderId,
+            fileName: driveFileName,
+            errorType,
+            userEmail,
+            errorMessage,
+            scheduleId,
+          },
+        });
         
         Logger.error(`downloadAndUploadVideoToDrive ${mode}: upload error in catch block`, {
           mode,
