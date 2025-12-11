@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import type { FormEvent } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Loader2, Save, X, Plus, Trash2, Play } from "lucide-react";
+import { ArrowLeft, Loader2, Save, X, Plus, Trash2, Play, Download } from "lucide-react";
 import { useAuthStore } from "../../stores/authStore";
 import { useChannelStore } from "../../stores/channelStore";
 import type {
@@ -27,6 +27,7 @@ import { GenerateDriveFoldersButton } from "../../components/GenerateDriveFolder
 import { getUserSettings } from "../../api/userSettings";
 import { getBlotatoPublishStatus, type BlotatoPublishSettings } from "../../utils/blotatoStatus";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { getAuthToken } from "../../utils/auth";
 
 const PLATFORMS: { value: SupportedPlatform; label: string }[] = [
   { value: "YOUTUBE_SHORTS", label: "YouTube Shorts" },
@@ -81,9 +82,10 @@ const ChannelEditPage = () => {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [channel, setChannel] = useState<Channel | null>(null);
-  const { toasts, showError, removeToast } = useToast();
+  const { toasts, showError, removeToast, showSuccess } = useToast();
   const [urlErrors, setUrlErrors] = useState<{
     youtube?: string;
     tiktok?: string;
@@ -300,6 +302,81 @@ const ChannelEditPage = () => {
 
     setUrlErrors(errors);
     return Object.keys(errors).length === 0;
+  };
+
+  const handleExport = async () => {
+    if (!user?.uid || !channelId || !channel) {
+      return;
+    }
+
+    setExporting(true);
+    try {
+      // Получаем токен авторизации
+      const token = await getAuthToken();
+
+      const backendBaseUrl =
+        (import.meta.env.VITE_BACKEND_URL as string | undefined) ||
+        "http://localhost:8080";
+      const exportUrl = `${backendBaseUrl}/api/channels/${channelId}/export`;
+
+      const response = await fetch(exportUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Не удалось экспортировать канал");
+      }
+
+      // Получаем имя файла из заголовка Content-Disposition или используем дефолтное
+      const contentDisposition = response.headers.get("Content-Disposition");
+      let filename = `channel_${channelId}_${(channel.name || "channel").toLowerCase().replace(/[^a-z0-9а-яё]/g, "-")}_shortsai.json`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Скачиваем файл
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      // Показываем успешное сообщение
+      showSuccess(`Канал "${channel.name}" успешно экспортирован`, 3000);
+    } catch (error: any) {
+      console.error("Export error:", error);
+
+      // Определяем тип ошибки
+      let errorMessage = "Не удалось экспортировать канал. Попробуйте позже.";
+      
+      if (error instanceof TypeError) {
+        if (error.message.includes("Failed to fetch") || error.message.includes("ERR_CONNECTION_REFUSED")) {
+          errorMessage = "Не удалось подключиться к серверу. Убедитесь, что backend запущен на порту 8080.";
+        } else if (error.message.includes("NetworkError") || error.message.includes("network")) {
+          errorMessage = "Ошибка сети. Проверьте подключение к интернету.";
+        } else {
+          errorMessage = `Ошибка подключения: ${error.message}`;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      showError(errorMessage, 6000);
+    } finally {
+      setExporting(false);
+    }
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -596,6 +673,24 @@ const ChannelEditPage = () => {
                 >
                   <ArrowLeft size={16} className="inline mr-2" />
                   Назад
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExport}
+                  disabled={exporting || !channel}
+                  className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-800/60 px-4 py-2 text-sm font-medium text-slate-300 transition-all duration-200 hover:border-white/20 hover:bg-slate-800/80 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {exporting ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Экспорт...
+                    </>
+                  ) : (
+                    <>
+                      <Download size={16} />
+                      Экспортировать канал
+                    </>
+                  )}
                 </button>
                 <button
                   type="submit"

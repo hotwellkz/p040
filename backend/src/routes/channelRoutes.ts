@@ -1333,50 +1333,7 @@ router.get("/export", authRequired, async (req, res) => {
     // Трансформируем каналы в формат экспорта, исключая чувствительные данные
     const exportedChannels = channelsSnapshot.docs.map((doc) => {
       const data = doc.data() as any;
-      
-      // Формируем объект экспорта без чувствительных полей
-      const exported: any = {
-        name: data.name,
-        platform: data.platform,
-        language: data.language,
-        targetDurationSec: data.targetDurationSec,
-        niche: data.niche || "",
-        audience: data.audience || "",
-        tone: data.tone || "",
-        blockedTopics: data.blockedTopics || "",
-        generationMode: data.generationMode || "script",
-        generationTransport: data.generationTransport || "telegram_global",
-        telegramSyntaxPeer: data.telegramSyntaxPeer || null,
-        preferences: data.preferences || null,
-        extraNotes: data.extraNotes || null,
-        timezone: data.timezone || null,
-        autoSendEnabled: data.autoSendEnabled || false,
-        autoSendSchedules: data.autoSendSchedules || [],
-        autoDownloadToDriveEnabled: data.autoDownloadToDriveEnabled || false,
-        autoDownloadDelayMinutes: data.autoDownloadDelayMinutes || 10,
-        uploadNotificationEnabled: data.uploadNotificationEnabled || false,
-        uploadNotificationChatId: data.uploadNotificationChatId || null,
-        blotataEnabled: data.blotataEnabled || false,
-        driveInputFolderId: data.driveInputFolderId || null,
-        driveArchiveFolderId: data.driveArchiveFolderId || null,
-        blotataYoutubeId: data.blotataYoutubeId || null,
-        blotataTiktokId: data.blotataTiktokId || null,
-        blotataInstagramId: data.blotataInstagramId || null,
-        blotataFacebookId: data.blotataFacebookId || null,
-        blotataFacebookPageId: data.blotataFacebookPageId || null,
-        blotataThreadsId: data.blotataThreadsId || null,
-        blotataTwitterId: data.blotataTwitterId || null,
-        blotataLinkedinId: data.blotataLinkedinId || null,
-        blotataPinterestId: data.blotataPinterestId || null,
-        blotataPinterestBoardId: data.blotataPinterestBoardId || null,
-        blotataBlueskyId: data.blotataBlueskyId || null,
-        youtubeUrl: data.youtubeUrl || null,
-        tiktokUrl: data.tiktokUrl || null,
-        instagramUrl: data.instagramUrl || null,
-        googleDriveFolderId: data.googleDriveFolderId || null
-      };
-      
-      return exported;
+      return transformChannelForExport(data);
     });
     
     // Формируем финальный объект экспорта
@@ -1404,6 +1361,124 @@ router.get("/export", authRequired, async (req, res) => {
     res.status(500).json({
       error: "Internal server error",
       message: error?.message || "Ошибка при экспорте каналов"
+    });
+  }
+});
+
+/**
+ * Вспомогательная функция для преобразования данных канала в формат экспорта
+ */
+function transformChannelForExport(data: any): any {
+  return {
+    name: data.name,
+    platform: data.platform,
+    language: data.language,
+    targetDurationSec: data.targetDurationSec,
+    niche: data.niche || "",
+    audience: data.audience || "",
+    tone: data.tone || "",
+    blockedTopics: data.blockedTopics || "",
+    generationMode: data.generationMode || "script",
+    generationTransport: data.generationTransport || "telegram_global",
+    telegramSyntaxPeer: data.telegramSyntaxPeer || null,
+    preferences: data.preferences || null,
+    extraNotes: data.extraNotes || null,
+    timezone: data.timezone || null,
+    autoSendEnabled: data.autoSendEnabled || false,
+    autoSendSchedules: data.autoSendSchedules || [],
+    autoDownloadToDriveEnabled: data.autoDownloadToDriveEnabled || false,
+    autoDownloadDelayMinutes: data.autoDownloadDelayMinutes || 10,
+    uploadNotificationEnabled: data.uploadNotificationEnabled || false,
+    uploadNotificationChatId: data.uploadNotificationChatId || null,
+    blotataEnabled: data.blotataEnabled || false,
+    driveInputFolderId: data.driveInputFolderId || null,
+    driveArchiveFolderId: data.driveArchiveFolderId || null,
+    blotataYoutubeId: data.blotataYoutubeId || null,
+    blotataTiktokId: data.blotataTiktokId || null,
+    blotataInstagramId: data.blotataInstagramId || null,
+    blotataFacebookId: data.blotataFacebookId || null,
+    blotataFacebookPageId: data.blotataFacebookPageId || null,
+    blotataThreadsId: data.blotataThreadsId || null,
+    blotataTwitterId: data.blotataTwitterId || null,
+    blotataLinkedinId: data.blotataLinkedinId || null,
+    blotataPinterestId: data.blotataPinterestId || null,
+    blotataPinterestBoardId: data.blotataPinterestBoardId || null,
+    blotataBlueskyId: data.blotataBlueskyId || null,
+    youtubeUrl: data.youtubeUrl || null,
+    tiktokUrl: data.tiktokUrl || null,
+    instagramUrl: data.instagramUrl || null,
+    googleDriveFolderId: data.googleDriveFolderId || null
+  };
+}
+
+/**
+ * GET /api/channels/:id/export
+ * Экспортирует один конкретный канал в JSON-файл
+ */
+router.get("/:id/export", authRequired, async (req, res) => {
+  Logger.info("Channel export: request received", {
+    userId: req.user?.uid,
+    channelId: req.params.id,
+    timestamp: new Date().toISOString()
+  });
+
+  if (!isFirestoreAvailable() || !db) {
+    return res.status(503).json({
+      error: "Firestore is not available",
+      message: "Firebase Admin не настроен"
+    });
+  }
+
+  try {
+    const userId = req.user!.uid;
+    const channelId = req.params.id;
+    
+    // Получаем канал пользователя
+    const channelRef = db.collection("users").doc(userId).collection("channels").doc(channelId);
+    const channelDoc = await channelRef.get();
+    
+    if (!channelDoc.exists) {
+      return res.status(404).json({
+        error: "Channel not found",
+        message: "Канал не найден"
+      });
+    }
+    
+    const data = channelDoc.data() as any;
+    
+    // Преобразуем канал в формат экспорта
+    const exportedChannel = transformChannelForExport(data);
+    
+    // Формируем финальный объект экспорта (совместимый с форматом массового экспорта)
+    const exportData = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      channels: [exportedChannel]
+    };
+    
+    // Формируем имя файла: channel_<channelId>_<name>_shortsai.json
+    const channelName = (data.name || "channel")
+      .toLowerCase()
+      .replace(/[^a-z0-9а-яё]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+    const filename = `channel_${channelId}_${channelName}_shortsai.json`;
+    
+    Logger.info("Channel exported", {
+      userId,
+      channelId,
+      channelName: data.name
+    });
+    
+    // Устанавливаем заголовки для скачивания файла
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.json(exportData);
+  } catch (error: any) {
+    Logger.error("Failed to export channel", error);
+    res.status(500).json({
+      error: "Internal server error",
+      message: error?.message || "Ошибка при экспорте канала"
     });
   }
 });
